@@ -12,6 +12,29 @@ python3 -m http.server 5500
 Open:
 - http://127.0.0.1:5500
 
+## Run the Serial -> WebSocket Bridge
+
+Install dependencies once:
+
+```bash
+pip install pyserial websockets
+```
+
+Run bridge (replace serial port with your Pico B port):
+
+```bash
+python3 dashboard/serial_ws_bridge.py --serial-port /dev/tty.usbmodemXXXX --baud 115200 --host 127.0.0.1 --port 8080 --path /telemetry
+```
+
+Dashboard default WebSocket URL already matches:
+- `ws://127.0.0.1:8080/telemetry`
+
+If serial is not ready yet, run bridge in no-serial mode:
+
+```bash
+python3 dashboard/serial_ws_bridge.py --no-serial
+```
+
 ## WebSocket Input
 
 Default socket URL in UI:
@@ -53,4 +76,3 @@ Config message sent from UI to backend:
 - Calibration controls (`mode`, `k_factor`, `intensity_limit`)
 - Safe stop button
 - Built-in simulation mode if backend is not ready
-
