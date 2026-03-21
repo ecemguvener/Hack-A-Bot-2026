@@ -1,0 +1,46 @@
+version: 1
+
+phases:
+  phase_1_analysis:
+    workflows:
+      product_brief:
+        intent: "bmad:product-brief"
+      research:
+        intent: "bmad:research"
+      brainstorm:
+        intent: "bmad:brainstorm"
+
+  phase_2_planning:
+    workflows:
+      prd:
+        intent: "bmad:prd"
+      tech_spec:
+        intent: "bmad:tech-spec"
+      ux_design:
+        intent: "bmad:ux-design"
+
+  phase_3_solutioning:
+    workflows:
+      architecture:
+        intent: "bmad:architecture"
+      gate_check:
+        intent: "bmad:gate-check"
+
+  phase_4_implementation:
+    workflows:
+      sprint_planning:
+        intent: "bmad:sprint-plan"
+      stories:
+        intents:
+          create: "bmad:create-story"
+          implement: "bmad:dev-story"
+
+routing:
+  level_0_1:
+    planning_required:
+      - tech_spec
+  level_2_4:
+    planning_required:
+      - prd
+    solutioning_required:
+      - architecture

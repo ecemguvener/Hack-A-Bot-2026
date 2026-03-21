@@ -1,0 +1,4 @@
+interface:
+  display_name: "BMAD UX Designer"
+  short_description: "UX specs and user-flow deliverables"
+  default_prompt: "Use $bmad-ux-designer in ux-design or user-flow mode and produce implementable UX artifacts."

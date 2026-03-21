@@ -1,0 +1,36 @@
+# BMAD Sprint Status
+# Tracks sprint progress and story completion
+
+project:
+  name: "{{project_name}}"
+  level: {{project_level}}
+
+sprint:
+  number: {{sprint_number}}
+  start_date: "{{sprint_start}}"
+  end_date: "{{sprint_end}}"
+  goal: "{{sprint_goal}}"
+  capacity_points: {{capacity_points}}
+  committed_points: {{committed_points}}
+
+velocity:
+  current_sprint: 0
+  rolling_average: 0
+  history: []
+
+epics: []
+
+stories: []
+
+burndown: []
+
+metrics:
+  total_stories: 0
+  completed_stories: 0
+  in_progress_stories: 0
+  blocked_stories: 0
+  total_points: 0
+  completed_points: 0
+  completion_percentage: 0
+
+last_updated: "{{timestamp}}"

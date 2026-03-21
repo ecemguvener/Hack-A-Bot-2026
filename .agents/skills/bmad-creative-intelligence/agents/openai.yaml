@@ -1,0 +1,4 @@
+interface:
+  display_name: "BMAD Creative Intelligence"
+  short_description: "Ideation and deep research synthesis"
+  default_prompt: "Use $bmad-creative-intelligence in ideate or research-deep mode and produce ranked recommendations."

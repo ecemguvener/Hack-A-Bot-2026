@@ -1,0 +1,4 @@
+interface:
+  display_name: "BMAD Builder"
+  short_description: "Scaffold BMAD skills and workflows"
+  default_prompt: "Use $bmad-builder in create-skill or create-workflow mode and generate a minimal validated scaffold."

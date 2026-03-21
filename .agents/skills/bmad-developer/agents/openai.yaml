@@ -1,0 +1,4 @@
+interface:
+  display_name: "BMAD Developer"
+  short_description: "Story implementation and quality review"
+  default_prompt: "Use $bmad-developer in dev-story or code-review mode and verify acceptance criteria with tests."

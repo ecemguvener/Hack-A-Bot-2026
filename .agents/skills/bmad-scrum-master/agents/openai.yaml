@@ -1,0 +1,4 @@
+interface:
+  display_name: "BMAD Scrum Master"
+  short_description: "Sprint planning and implementation-ready stories"
+  default_prompt: "Use $bmad-scrum-master in sprint-plan or create-story mode and update sprint scope with actionable stories."

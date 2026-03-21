@@ -1,0 +1,4 @@
+interface:
+  display_name: "BMAD Analyst"
+  short_description: "Discovery, research, and brief generation"
+  default_prompt: "Use $bmad-analyst in product-brief, research, or brainstorm mode and produce the matching discovery artifact."

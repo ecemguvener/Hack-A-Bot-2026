@@ -1,0 +1,4 @@
+interface:
+  display_name: "BMAD Architect"
+  short_description: "Architecture design and gate-check coverage"
+  default_prompt: "Use $bmad-architect in architecture or gate-check mode and produce architecture decisions with NFR coverage."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "BMAD Orchestrator"
+  short_description: "Initialize, inspect, and route BMAD flow"
+  default_prompt: "Use $bmad-orchestrator in init, status, or next mode and route to the correct BMAD intent."

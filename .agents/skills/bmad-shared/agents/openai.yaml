@@ -1,0 +1,4 @@
+interface:
+  display_name: "BMAD Shared"
+  short_description: "Shared YAML state contracts and helpers"
+  default_prompt: "Use $bmad-shared for config-read, status-update, or next-recommendation tasks on BMAD YAML files."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "BMAD Product Manager"
+  short_description: "PRD, tech spec, and prioritization planning"
+  default_prompt: "Use $bmad-product-manager in prd, tech-spec, or prioritize mode based on project level and output a planning artifact."
