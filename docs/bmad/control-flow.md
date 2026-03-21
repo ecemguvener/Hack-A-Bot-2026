@@ -1,60 +1,52 @@
 # Control-Flow Sketch
+> Keep mode logic simple (`NORMAL`, `CALIBRATION`, `SAFE`) so debugging is faster.
 
-## Node A (Device Loop)
+## Node A (Glove, closed loop)
 
 ```text
 INIT
-  -> sensor init
+  -> IMU init
   -> RF init
-  -> calibration window
-  -> mode = IDLE
+  -> motor driver init
+  -> load default config (mode, k, limits)
 
 MAIN LOOP (100 Hz)
-  1) Read IMU
+  1) Read IMU sample
   2) Validate sample
-     - if invalid -> fault flag + safe output
-  3) Estimate orientation/features
-  4) Compute metrics
-     - tremor amplitude proxy
-     - smoothness score
-     - stability score
-  5) If assist enabled:
-     - evaluate candidate profile response
-     - choose/update active profile
-     - compute output command (bounded)
-     - apply command
-     else:
-     - output neutral/minimum
-  6) Check RF heartbeat timeout
-     - timeout -> safe output + link_lost flag
-  7) Periodic telemetry TX to Node B
+     - invalid -> set fault, stop/limit motor, continue
+  3) Push sample to rolling window (1-2 s)
+  4) Compute per-axis RMS/variance
+  5) Select dominant axis + sign
+  6) Filter dominant-axis signal (HP/BP)
+  7) Estimate f_tremor using zero-crossings in window
+     f_tremor = (zero_crossings / 2) / window_seconds
+  8) Smooth f_tremor and magnitude
+  9) Determine opposing motor from axis/sign map
+ 10) Compute f_motor = clamp(k_factor * f_tremor, f_min, f_max)
+ 11) Compute duty from magnitude and intensity_limit
+ 12) Drive selected motor
+ 13) Check RF timeout
+      - timeout -> safe fallback output
+ 14) Send telemetry to Node B at 10-20 Hz
+ 15) Apply any new config packet (mode, k, limits)
 ```
 
-## Node B (Companion Loop)
+## Node B (Base bridge)
 
 ```text
 INIT
-  -> input init (joystick/buttons)
-  -> OLED init
   -> RF init
+  -> PC link init (WebSocket/HTTP/TCP)
 
-MAIN LOOP (~20-50 Hz)
-  1) Read user inputs
-  2) Build control packet
-     - mode
-     - profile
-     - assist enable
-     - heartbeat
-  3) TX packet to Node A
-  4) RX telemetry from Node A
-  5) Update OLED
-     - mode/profile
-     - metrics
-     - link/fault status
+MAIN LOOP
+  1) RX telemetry from Node A
+  2) Store/update latest state
+  3) Forward telemetry to PC UI
+  4) Read PC UI config changes
+  5) TX config to Node A
 ```
 
-## State Machine (A)
-- `IDLE`: no assist output
-- `BASELINE`: metric capture without assist
-- `ASSIST`: adaptive support active
-- `SAFE`: fallback after RF/sensor fault
+## Modes
+- `NORMAL`: full closed-loop control
+- `CALIBRATION`: user adjusts `k_factor`; telemetry continues for comparison
+- `SAFE`: entered on RF/IMU fault with bounded or disabled motor output

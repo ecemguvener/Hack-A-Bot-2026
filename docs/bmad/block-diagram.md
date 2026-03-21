@@ -1,26 +1,32 @@
 # Block Diagram
+> Keep this on one page. While talking, literally point at boxes so judges can follow fast.
 
 ```text
-                 +-------------------------------------------+
-                 |            Node B: Companion Pico         |
-                 |-------------------------------------------|
-                 | Joystick / Buttons -> Mode/Profile Select |
-                 | OLED <- Telemetry + Link Status           |
-                 | nRF24 TX/RX (Supervisor + Control)        |
-                 +--------------------+----------------------+
-                                      |
-                                      | 2.4 GHz nRF24 packets
-                                      v
-+------------------------------------------------------------------------+
-|                     Node A: Device/Wearable Pico                       |
-|------------------------------------------------------------------------|
-| BMI160 IMU -> Feature Extraction -> Adaptive Selector -> Actuation Out |
-|                 |                   |                                   |
-|                 +-> Telemetry ----->+                                   |
-| RF Heartbeat Monitor -> Safe Fallback (neutral/minimum output)         |
-+------------------------------------------------------------------------+
++----------------------------------------------------+
+| Node B: Base Pico (Bridge + Config + UI Forwarder) |
+|----------------------------------------------------|
+| nRF24 RX/TX                                        |
+| Config manager: mode, k_factor, intensity_limit    |
+| PC link: WebSocket/HTTP/TCP                        |
+| Optional OLED status                               |
++--------------------------+-------------------------+
+                           |
+                           | nRF24 telemetry/config
+                           v
++-------------------------------------------------------------------+
+| Node A: VibraARM Glove Pico                                       |
+|-------------------------------------------------------------------|
+| BMI160 @ 100 Hz -> rolling window (1-2 s)                         |
+| -> dominant axis/sign + RMS magnitude                             |
+| -> filtered dominant axis -> zero-crossing frequency estimate     |
+| -> f_motor = k_factor * f_tremor                                  |
+| -> opposing motor selection (axis/sign map)                       |
+| -> N20 motor drive (bounded duty/frequency)                       |
+| -> telemetry packet TX                                             |
+| RF/IMU fault checks -> safe fallback                              |
++-------------------------------------------------------------------+
 ```
 
 ## Packet Direction
-- B -> A: mode, profile, enable/disable assist, heartbeat
-- A -> B: tremor amplitude proxy, smoothness, stability, actuator command, fault flags
+- B -> A: `mode`, `k_factor`, `intensity_limit`, overrides/heartbeat
+- A -> B: `timestamp`, `f_tremor`, `magnitude`, `axis`, `motor_id`, `f_motor`, `mode`, `k_factor`, fault flags

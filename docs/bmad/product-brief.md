@@ -1,21 +1,22 @@
-# Product Brief: NeuroCalm Adaptive Tremor Support
+# Product Brief: VibraARM Closed-Loop Tremor Support
+> This is an engineering prototype for session-level assistive support, not a clinical efficacy claim.
 
 - **Date:** 2026-03-21
 - **Author:** Hack-A-Bot Team
 - **Status:** Draft
-- **Version:** 0.1
+- **Version:** 0.2
 
 ---
 
 ## 1. Executive Summary
 
-NeuroCalm is an assistive embedded prototype for people with Parkinsonian hand tremor. The system measures hand movement in real time and adapts vibration feedback per user profile to improve short-session hand stability during task performance. The design uses two Raspberry Pi Pico 2 boards and nRF24 wireless coordination to satisfy the Project 6 Creative brief and provide a measurable, repeatable live demo.
+VibraARM is an assistive embedded prototype that detects tremor features in real time and drives opposing vibration feedback on a wearable node. The system uses two Raspberry Pi Pico 2 boards with nRF24 wireless coordination: one glove node for closed-loop sensing/control and one base node for monitoring, UI bridge, and calibration updates.
 
 **Key Points:**
-- Problem: Hand tremor reduces control in daily tasks and confidence.
-- Solution: Personalized adaptive vibration support using IMU-driven feedback.
-- Target Users: People with Parkinsonian hand tremor (primary), caregivers/clinicians (secondary).
-- Timeline: 20-hour hackathon build, live judged demo.
+- Problem: users with hand tremor need adaptive support beyond static aids.
+- Solution: closed-loop tremor estimation + opposing motor actuation with user-calibrated multiplier `k`.
+- Target Users: people with Parkinsonian tremor (primary), caregivers/clinicians (secondary).
+- Timeline: 20-hour hackathon implementation with live measurable demo.
 
 ---
 
@@ -23,41 +24,41 @@ NeuroCalm is an assistive embedded prototype for people with Parkinsonian hand t
 
 ### The Problem
 
-Users with Parkinsonian tremor experience involuntary hand oscillations that make precise and steady actions difficult. Existing low-cost workaround approaches (for example weighted gloves) are static and not personalized to each user’s tremor pattern.
+Involuntary tremor motion reduces fine motor control and confidence during everyday tasks. Static supports (for example weighted accessories) do not adapt to changing tremor direction/frequency per user.
 
 ### Who Experiences This Problem
 
-People with Parkinsonian tremor, especially during tasks requiring steady hand posture or controlled movement.
+People with Parkinsonian tremor and related hand-instability conditions.
 
 **Primary Users:**
-- People with Parkinsonian hand tremor
-- Adults needing better hand stability for daily tasks
-- Users seeking non-invasive assistive support
+- People with Parkinsonian tremor
+- Users needing short-session hand stability assistance
+- Users who benefit from lightweight wearable support
 
 **Secondary Users:**
 - Caregivers
-- Rehabilitation or clinical staff
+- Rehabilitation support staff
 
 ### Current Situation
 
 **How Users Currently Handle This:**
-Weighted glove with components (static configuration).
+Static weighted supports and non-adaptive routines.
 
 **Pain Points:**
-- Static support does not adapt to changing tremor patterns.
-- Limited feedback on whether support is helping.
-- Setup is trial-and-error and user-specific tuning is hard.
+- No direction-specific response
+- No user-specific frequency calibration
+- Limited real-time feedback about effectiveness
 
 ### Impact & Urgency
 
 **Impact if Unsolved:**
-Lower independence and task confidence for affected users.
+Lower task confidence and reduced functional independence in daily hand activities.
 
 **Why Now:**
-Strong judging fit for assistive tech with measurable outcomes and clear two-node wireless architecture.
+Clear assistive-tech fit for Project 6 with measurable, live, two-node embedded control.
 
 **Frequency:**
-Symptoms can appear repeatedly during normal daily hand tasks.
+Tremor effects occur repeatedly throughout daily activity.
 
 ---
 
@@ -65,34 +66,34 @@ Symptoms can appear repeatedly during normal daily hand tasks.
 
 ### User Personas
 
-#### Persona 1: Independent Daily User
-- **Role:** Person living with Parkinsonian tremor
-- **Goals:** Improve steadiness for short daily tasks
-- **Pain Points:** Inconsistent control, frustration from visible shake
+#### Persona 1: Daily Independent User
+- **Role:** Person living with tremor
+- **Goals:** Improve hand steadiness in short tasks
+- **Pain Points:** Inconsistent hand control and frustration
 - **Technical Proficiency:** Low to medium
-- **Usage Pattern:** Short repeated sessions during the day
+- **Usage Pattern:** Multiple short assist sessions
 
-#### Persona 2: Caregiver-Supported User
-- **Role:** Patient supported by caregiver
-- **Goals:** Safer and more reliable assisted task performance
-- **Pain Points:** Hard to tune one fixed support setting
+#### Persona 2: Caregiver-Assisted User
+- **Role:** User supported by caregiver
+- **Goals:** Configure and reuse stable settings safely
+- **Pain Points:** Hard to tune one fixed setting for varying tremor patterns
 - **Technical Proficiency:** Low
-- **Usage Pattern:** Supervised sessions and profile switching
+- **Usage Pattern:** Supervised sessions with periodic recalibration
 
 ### User Needs
 
 **Must Have:**
-- Real-time tremor sensing and feedback loop
-- Personalized profile behavior per user
-- Stable operation with safe fallback mode
+- Real-time tremor feature extraction
+- Direction-aware opposing motor selection
+- Adjustable calibration factor `k`
 
 **Should Have:**
-- Clear session metrics for baseline vs assisted behavior
-- Simple mode/profile switching
+- Live telemetry and mode visibility
+- Safe fallback behavior on faults
 
 **Nice to Have:**
-- Longitudinal progress tracking across multiple sessions
-- Clinician-facing tuning presets
+- Saved per-user calibration presets
+- Session history export
 
 ---
 
@@ -100,47 +101,48 @@ Symptoms can appear repeatedly during normal daily hand tasks.
 
 ### Solution Overview
 
-NeuroCalm uses a wearable/handheld sensing node (Pico A) to estimate tremor characteristics and apply adaptive vibration patterns, while a companion node (Pico B) handles profile control, UI, and telemetry over nRF24. The adaptation logic evaluates movement features and adjusts support per user profile in-session.
+VibraARM runs a closed-loop controller on the glove Pico. It samples BMI160 at fixed rate, computes dominant tremor axis/sign and magnitude, estimates tremor frequency with a low-compute zero-crossing method, then drives an opposing N20 motor using `f_motor = k * f_tremor`. The base Pico forwards telemetry to a PC UI and sends calibration/config commands back.
 
 ### Key Capabilities
 
-1. **Real-Time Motion Sensing**
-   - Description: BMI160 IMU samples hand motion continuously.
-   - User Value: Captures each user’s movement pattern instead of fixed assumptions.
+1. **Real-Time Tremor Estimation**
+   - Description: rolling-window axis analysis and frequency estimation.
+   - User Value: dynamic response based on actual movement.
 
-2. **Adaptive Feedback Selection**
-   - Description: Controller chooses among candidate vibration settings based on observed response.
-   - User Value: Personalized assistance rather than one-size-fits-all support.
+2. **Opposing Motor Selection**
+   - Description: dominant axis/sign mapped to opposite-side motor.
+   - User Value: targeted directional counter-stimulation.
 
-3. **Two-Node Wireless Control**
-   - Description: Companion Pico updates mode/profile and receives telemetry.
-   - User Value: Easy adjustment and transparent operation during demo/use.
+3. **User Calibration Mode**
+   - Description: UI-driven tuning of `k_factor` and limits.
+   - User Value: personalized behavior per user.
 
-4. **Safety and Reliability Behaviors**
-   - Description: RF timeout and invalid sensor data trigger safe fallback behavior.
-   - User Value: Predictable and safe operation.
+4. **Wireless Monitoring + Control**
+   - Description: nRF24 telemetry/config between glove and base nodes.
+   - User Value: transparent operation and easier tuning.
 
-5. **Live Measurable Metrics**
-   - Description: Session outputs include amplitude/smoothness/stability scores.
-   - User Value: Immediate evidence of assistance effect.
+5. **Safety-Focused Output Control**
+   - Description: clamped frequency/duty and fault fallback.
+   - User Value: predictable behavior under failures.
 
 ### What Makes This Different
 
-Unlike static weighted support, this system continuously adapts feedback to user-specific movement behavior during operation.
+Combines real-time directional tremor mapping with user-tuned closed-loop frequency scaling in a dual-node low-cost embedded system.
 
 **Unique Value Proposition:**
-Personalized, low-cost, edge-based tremor support using embedded wireless coordination.
+User-calibrated closed-loop tremor counter-stimulation with real-time telemetry in a practical two-Pico architecture.
 
 ### Minimum Viable Solution
 
 **Core Features for MVP:**
-- IMU-based tremor feature extraction at fixed sample rate
-- Adaptive vibration profile switching
-- Companion node with profile/mode control and telemetry display
+- BMI160 sampling at 100 Hz with rolling window
+- Dominant-axis + zero-crossing tremor frequency estimate
+- Opposing N20 motor actuation with `f_motor = k * f_t`
+- Base-node telemetry bridge and calibration mode controls
 
 **Deferred to Later:**
-- Long-term multi-session progress modeling
-- Clinical validation and medical-grade safety process
+- Multi-motor advanced blending strategy
+- Clinical validation workflow
 
 ---
 
@@ -148,39 +150,39 @@ Personalized, low-cost, edge-based tremor support using embedded wireless coordi
 
 ### Primary Metrics
 
-**Tremor Amplitude Change (Session)**
-- Baseline: Measured in an unassisted calibration window
-- Target: Demonstrate measurable improvement in assisted mode
-- Timeline: During live demo session
-- Measurement: Compare baseline vs assisted amplitude features
+**Tremor Frequency Tracking Stability**
+- Baseline: raw estimate variance without smoothing
+- Target: stable `f_tremor` trend in real-time view
+- Timeline: live session
+- Measurement: rolling estimate jitter and continuity
 
-**Movement Smoothness Score**
-- Baseline: Derived from raw motion variability
-- Target: Improved smoothness under adaptive assistance
-- Timeline: During live demo session
-- Measurement: Rolling score from filtered IMU signal
+**Directional Motor Selection Correctness**
+- Baseline: no direction-aware mapping
+- Target: dominant axis/sign correctly mapped to opposing motor in demo cases
+- Timeline: live session
+- Measurement: expected axis -> motor activation checks
 
-**Task Stability Score**
-- Baseline: Unassisted hold/trace stability score
-- Target: Better score with adaptive support enabled
-- Timeline: During live demo session
-- Measurement: Time in stable zone / trajectory deviation
+**Closed-Loop Responsiveness**
+- Baseline: static motor pattern
+- Target: `f_motor` follows `k * f_tremor` under changing motion
+- Timeline: live session
+- Measurement: telemetry consistency between `f_t`, `k`, and `f_motor`
 
 ### Secondary Metrics
 
-- RF packet reliability during demo
-- Adaptation convergence time per profile
-- Number of safe fallback events
+- RF packet reliability
+- Number of fallback events
+- Calibration convergence time for usable `k`
 
 ### Success Criteria
 
 **Must Achieve:**
-- Clear before/after session comparison with at least one improved primary metric
-- Stable two-Pico wireless coordination throughout demo
+- Stable two-Pico wireless operation during live demo
+- Real-time telemetry shows valid `f_tremor`, magnitude, axis, motor, and `f_motor`
 
 **Should Achieve:**
-- Improvement across at least two primary metrics in the same run
-- Visible personalization effect when switching profiles/users
+- Calibration mode demonstrates user-adjusted `k` changing motor behavior predictably
+- Fault behavior demonstrated (timeout or safe-stop)
 
 ---
 
@@ -189,100 +191,98 @@ Personalized, low-cost, edge-based tremor support using embedded wireless coordi
 ### Market Context
 
 **Market Size:**
-Large and growing assistive technology demand driven by aging populations and chronic movement disorders.
+Assistive movement-support demand is growing with aging populations and chronic motor disorders.
 
 **Market Trends:**
-- Shift from passive aids to adaptive assistive devices
-- Increased demand for low-cost home-use support tools
-- Growing interest in edge intelligence for privacy and low latency
+- Shift from passive supports to adaptive assistive devices
+- Demand for low-cost edge solutions
+- Preference for private/local processing in personal health contexts
 
 **Target Market Segment:**
-Entry-level assistive devices for tremor support in home and caregiver settings.
+Wearable assistive tremor support prototypes for home and supervised care contexts.
 
 ### Competitive Landscape
 
-#### Competitor 1: Weighted gloves and passive braces
-- **Strengths:** Simple, low cost, easy access
-- **Weaknesses:** No personalization or adaptation
-- **Pricing:** Low
-- **Market Position:** Basic workaround
+#### Competitor 1: Weighted supports
+- **Strengths:** inexpensive, simple
+- **Weaknesses:** no adaptation, no telemetry
+- **Pricing:** low
+- **Market Position:** passive baseline option
 
-#### Competitor 2: Premium therapeutic devices
-- **Strengths:** Better engineering and support ecosystems
-- **Weaknesses:** Higher cost and limited accessibility
-- **Pricing:** Medium to high
-- **Market Position:** Specialized solutions
+#### Competitor 2: Premium specialized devices
+- **Strengths:** polished ecosystems
+- **Weaknesses:** cost and accessibility barriers
+- **Pricing:** medium-high
+- **Market Position:** specialized products
 
-#### Competitor 3: Mobile app guidance without hardware feedback
-- **Strengths:** Easy software distribution
-- **Weaknesses:** No direct physical stabilization feedback
-- **Pricing:** Low to medium
-- **Market Position:** Indirect support only
+#### Competitor 3: Software-only guidance apps
+- **Strengths:** easy distribution
+- **Weaknesses:** no direct physical response
+- **Pricing:** low-medium
+- **Market Position:** indirect support
 
 ### Competitive Advantages
 
-- Personalized adaptive behavior at low hardware cost
-- Fully local embedded control loop (low latency)
-- Clear measurable outcome in short sessions
+- Direction-aware response from on-device sensing
+- User-calibrated closed-loop factor tuning
+- Transparent real-time telemetry for calibration and debugging
 
 ---
 
 ## 7. Business Model
 
-- **Primary model:** Device kit sale with simple companion interface
-- **Secondary model:** Caregiver/clinic profile presets and service support
-- **Early go-to-market:** Pilot programs with rehab/assistive communities
+- **Primary model:** affordable wearable kit + companion interface
+- **Secondary model:** caregiver/clinic setup profiles
+- **Pilot path:** maker/rehab community trials and feedback
 
 ---
 
 ## 8. Technical Considerations
 
-- Two-node architecture is mandatory and built-in:
-  - Pico A: sensing + adaptation + actuator control
-  - Pico B: UI/profile control + telemetry + supervision
-- RF transport: nRF24 bidirectional packets with heartbeat
-- Sample rate target: 100 Hz IMU loop
-- Reliability focus: RF timeout fallback and actuator saturation limits
+- Hardware: 2x Pico 2, BMI160, 2x nRF24, N20 micro geared motor + driver stage
+- Loop rate: 100 Hz target on glove node
+- Estimation method: rolling-window RMS/variance + filtered zero-crossings
+- RF protocol: telemetry (10-20 Hz) + config on change
+- Modes: `NORMAL`, `CALIBRATION`, `SAFE`
 
 ---
 
 ## 9. Risks & Mitigation
 
-- **Risk:** Integration delays across sensing, control, and RF
-  - **Mitigation:** Bring up RF link and telemetry first, then add adaptation
-- **Risk:** Improvement not obvious in live judging
-  - **Mitigation:** Predefined baseline vs assisted protocol with on-screen metrics
-- **Risk:** Wireless dropouts
-  - **Mitigation:** Heartbeat timeout + safe fallback behavior + short-range demo setup
+- **Risk:** RF reliability under noise
+  - **Mitigation:** heartbeat, timeout, local safe defaults
+- **Risk:** noisy frequency estimate
+  - **Mitigation:** dominant-axis filtering + moving average smoothing
+- **Risk:** motor power/noise coupling into logic
+  - **Mitigation:** separate motor power rail, common ground, clamped drive
 
 ---
 
 ## 10. Resource Estimates
 
-- **Team:** 4 people
-- **Available Build Time:** 20 hours
-- **Hardware:** 2x Pico 2, 2x nRF24, BMI160, OLED, joystick, power modules, optional vibration actuator/servo proxy
-- **Work split:**
-  - Embedded sensing/control
-  - RF/UI node
-  - Hardware integration/power
-  - Test protocol + demo + documentation
+- **Team:** 4 members
+- **Build Window:** 20 hours
+- **Core Workstreams:**
+  - glove control firmware
+  - RF bridge + PC interface
+  - motor driver + power integration
+  - test protocol + documentation
 
 ---
 
 ## 11. Dependencies
 
-- Stable BMI160 sampling and calibration
-- Reliable two-way nRF24 communication
-- Defined trial protocol for baseline vs assisted comparison
-- Repeatable demo fixture and timing
+- Stable BMI160 sample timing
+- Motor driver stage for N20 (do not drive directly from Pico pin)
+- Reliable nRF24 communication both directions
+- PC-side realtime visualization path
 
 ---
 
 ## 12. Next Steps
 
-1. Finalize hardware fixture and actuator choice for haptic output.
-2. Implement RF heartbeat and telemetry first.
-3. Implement baseline capture and assisted mode comparison.
-4. Define fixed demo script with metric capture table.
-5. Proceed to `bmad:brainstorm` or directly to `bmad:prd`.
+1. Freeze final pinout and packet structs.
+2. Bring up RF telemetry/config link first.
+3. Implement dominant-axis + zero-crossing estimator.
+4. Add calibration mode controls from PC UI.
+5. Run baseline/calibration/normal demo rehearsals and log evidence table.

@@ -1,48 +1,11 @@
 # Wiring Diagram (Reference)
+> Keep this file synced with your real pin map in code.
 
-Note: Confirm exact pin choices on your final board; this is a stable starting map.
+Note: keep final pin map consistent in firmware and this doc.
 
-## Node A (Device Pico)
+## Node A (VibraARM Glove Pico)
 
 ### BMI160 (I2C)
-- VCC -> 3V3
-- GND -> GND
-- SDA -> GP4
-- SCL -> GP5
-
-### Actuation Output (choose one path)
-1) Direct haptic motor driver signal
-- PWM/CTRL -> GP16
-- Driver power -> external regulated rail
-- Common ground with Pico
-
-2) Servo proxy via PCA9685
-- PCA9685 VCC -> 3V3 (logic)
-- PCA9685 GND -> GND
-- PCA9685 SDA -> GP4
-- PCA9685 SCL -> GP5
-- Servo signal -> PCA9685 CH0/CH1
-- Servo power -> dedicated 5V rail (not Pico 3V3)
-
-### nRF24L01+ (SPI)
-- VCC -> 3V3
-- GND -> GND
-- CE  -> GP20
-- CSN -> GP17
-- SCK -> GP18
-- MOSI-> GP19
-- MISO-> GP16 (if GP16 used, remap either CE/IRQ/CTRL)
-
-## Node B (Companion Pico)
-
-### Joystick
-- VCC -> 3V3
-- GND -> GND
-- VRx -> GP26 (ADC0)
-- VRy -> GP27 (ADC1)
-- SW  -> GP22
-
-### OLED 0.96" (I2C)
 - VCC -> 3V3
 - GND -> GND
 - SDA -> GP4
@@ -57,7 +20,34 @@ Note: Confirm exact pin choices on your final board; this is a stable starting m
 - MOSI-> GP19
 - MISO-> GP16
 
+### N20 Motor Drive (required driver transistor/MOSFET stage)
+- PWM/CTRL pin from Pico -> GP15 (example)
+- Driver input <- GP15
+- Driver output -> N20 motor terminals
+- Motor supply -> regulated external rail
+- Flyback protection required (if not integrated in driver)
+- Common GND between Pico, driver, and motor supply
+
+## Node B (Base Pico)
+
+### nRF24L01+ (SPI)
+- VCC -> 3V3
+- GND -> GND
+- CE  -> GP20
+- CSN -> GP17
+- SCK -> GP18
+- MOSI-> GP19
+- MISO-> GP16
+
+### Optional Controls (if used on base)
+- Joystick VRx -> GP26
+- Joystick VRy -> GP27
+- Joystick SW  -> GP22
+- OLED SDA/SCL -> GP4/GP5
+
 ## Power Notes
-- Use LM2596 for stable rails when actuators are used.
-- Keep radio + logic rails clean; avoid sharing noisy motor rails directly.
-- Mandatory: all grounds common between Pico, radio, sensors, and drivers.
+> Most late failures are power-related. Test motors and radios together early.
+- Do not power N20 directly from Pico pin.
+- Isolate noisy motor supply from logic rail as much as possible.
+- Use buck converter for stable rails.
+- All grounds must be common.
