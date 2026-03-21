@@ -8,29 +8,97 @@ project:
 sprint:
   number: 1
   start_date: "2026-03-21"
-  end_date: "2026-04-04"
-  goal: "Initial baseline sprint"
+  end_date: "2026-03-22"
+  goal: "Deliver a reliable end-to-end VibraARM demo with closed-loop control and calibration mode"
   capacity_points: 20
-  committed_points: 0
+  committed_points: 20
 
 velocity:
   current_sprint: 0
   rolling_average: 0
   history: []
 
-epics: []
+epics:
+  - name: "Tremor Sensing Core"
+    points: 6
+  - name: "Closed-Loop Actuation"
+    points: 5
+  - name: "Wireless Telemetry and Config"
+    points: 5
+  - name: "Calibration + Demo UI"
+    points: 4
 
-stories: []
+stories:
+  - id: "STORY-101"
+    title: "BMI160 Fixed-Rate Sampling Pipeline"
+    points: 2
+    priority: "Must Have"
+    status: "not_started"
+  - id: "STORY-102"
+    title: "Dominant Axis + Magnitude Extraction"
+    points: 2
+    priority: "Must Have"
+    status: "not_started"
+  - id: "STORY-103"
+    title: "Zero-Crossing Tremor Frequency Estimator"
+    points: 2
+    priority: "Must Have"
+    status: "not_started"
+  - id: "STORY-201"
+    title: "Opposing Motor Mapping"
+    points: 2
+    priority: "Must Have"
+    status: "not_started"
+  - id: "STORY-202"
+    title: "Motor Frequency + Intensity Control"
+    points: 3
+    priority: "Must Have"
+    status: "not_started"
+  - id: "STORY-301"
+    title: "Telemetry Packet TX/RX"
+    points: 2
+    priority: "Must Have"
+    status: "not_started"
+  - id: "STORY-302"
+    title: "Config Channel + Mode Switching"
+    points: 3
+    priority: "Must Have"
+    status: "not_started"
+  - id: "STORY-401"
+    title: "UI Dashboard + Calibration Control"
+    points: 2
+    priority: "Should Have"
+    status: "not_started"
+  - id: "STORY-402"
+    title: "Safety/Fault Demo Path"
+    points: 2
+    priority: "Should Have"
+    status: "not_started"
 
-burndown: []
+burndown:
+  - time: "H0"
+    completed_points: 0
+    remaining_points: 20
+  - time: "H5"
+    completed_points: 4
+    remaining_points: 16
+  - time: "H10"
+    completed_points: 10
+    remaining_points: 10
+  - time: "H15"
+    completed_points: 15
+    remaining_points: 5
+  - time: "H20"
+    completed_points: 20
+    remaining_points: 0
 
 metrics:
-  total_stories: 0
+  total_stories: 9
   completed_stories: 0
   in_progress_stories: 0
   blocked_stories: 0
-  total_points: 0
+  total_points: 20
   completed_points: 0
   completion_percentage: 0
 
-last_updated: "2026-03-21T16:23:26Z"
+last_updated: "2026-03-21T00:00:00Z"
