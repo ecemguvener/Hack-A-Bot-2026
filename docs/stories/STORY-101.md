@@ -4,7 +4,7 @@
 - **Epic:** Tremor Sensing Core
 - **Priority:** Must Have
 - **Story Points:** 2
-- **Status:** Not Started
+- **Status:** In Progress
 
 ## User Story
 As a **control firmware module**
@@ -34,3 +34,12 @@ Use fixed timestep scheduling with elapsed-time compensation. Write samples into
 - [ ] 100 Hz timing log test
 - [ ] ring buffer bounds test
 - [ ] 5-minute stability run
+
+## Progress Update
+- Implemented in `hackabot2026-steadiARM/hackabot2026-steadiARM.c`:
+  - 100 Hz fixed-step sampling loop with elapsed-time compensation
+  - 2-second rolling ring buffer with timestamped IMU samples
+  - BMI160 initialization/read scaffold and validity flag handling
+- Pending before marking complete:
+  - run on hardware with `PICO_SDK_PATH` configured
+  - execute 5-minute stability and bounds tests

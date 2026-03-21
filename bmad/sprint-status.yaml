@@ -4,7 +4,6 @@
 project:
   name: "Hack-A-Bot 2026"
   level: 2
-
 sprint:
   number: 1
   start_date: "2026-03-21"
@@ -12,12 +11,10 @@ sprint:
   goal: "Deliver a reliable end-to-end VibraARM demo with closed-loop control and calibration mode"
   capacity_points: 20
   committed_points: 20
-
 velocity:
   current_sprint: 0
   rolling_average: 0
   history: []
-
 epics:
   - name: "Tremor Sensing Core"
     points: 6
@@ -27,13 +24,12 @@ epics:
     points: 5
   - name: "Calibration + Demo UI"
     points: 4
-
 stories:
   - id: "STORY-101"
     title: "BMI160 Fixed-Rate Sampling Pipeline"
     points: 2
     priority: "Must Have"
-    status: "not_started"
+    status: "in_progress"
   - id: "STORY-102"
     title: "Dominant Axis + Magnitude Extraction"
     points: 2
@@ -74,7 +70,6 @@ stories:
     points: 2
     priority: "Should Have"
     status: "not_started"
-
 burndown:
   - time: "H0"
     completed_points: 0
@@ -91,14 +86,12 @@ burndown:
   - time: "H20"
     completed_points: 20
     remaining_points: 0
-
 metrics:
   total_stories: 9
   completed_stories: 0
-  in_progress_stories: 0
+  in_progress_stories: 1
   blocked_stories: 0
   total_points: 20
   completed_points: 0
   completion_percentage: 0
-
-last_updated: "2026-03-21T00:00:00Z"
+last_updated: "2026-03-21T21:35:00Z"
