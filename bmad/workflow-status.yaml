@@ -5,7 +5,7 @@ project:
   name: "Hack-A-Bot 2026"
   level: 2
   initialized: "2026-03-21T16:23:26Z"
-  last_updated: "2026-03-21T20:50:08Z"
+  last_updated: "2026-03-21T21:20:00Z"
 current_phase: 4
 current_workflow: sprint_planning
 phases:
@@ -72,13 +72,22 @@ phases:
         output_file: docs/bmad/sprint-plan.md
         completed_at: "2026-03-21T20:50:08Z"
       stories:
-        total: 0
+        total: 9
         completed: 0
         in_progress: 0
-        story_list: []
+        story_list:
+          - docs/stories/STORY-101.md
+          - docs/stories/STORY-102.md
+          - docs/stories/STORY-103.md
+          - docs/stories/STORY-201.md
+          - docs/stories/STORY-202.md
+          - docs/stories/STORY-301.md
+          - docs/stories/STORY-302.md
+          - docs/stories/STORY-401.md
+          - docs/stories/STORY-402.md
 metrics:
   total_workflows: 10
   completed_workflows: 6
   progress_percentage: 60
-  estimated_stories: 0
+  estimated_stories: 9
   completed_stories: 0
