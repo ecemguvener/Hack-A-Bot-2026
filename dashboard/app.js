@@ -15,6 +15,10 @@ const els = {
   chipSafeMode: document.getElementById("chipSafeMode"),
   chipPacketLoss: document.getElementById("chipPacketLoss"),
   chipImuHealth: document.getElementById("chipImuHealth"),
+  safetyScore: document.getElementById("safetyScore"),
+  riskMeterFill: document.getElementById("riskMeterFill"),
+  safetyState: document.getElementById("safetyState"),
+  safetyHint: document.getElementById("safetyHint"),
   ftremor: document.getElementById("ftremor"),
   magnitude: document.getElementById("magnitude"),
   fmotor: document.getElementById("fmotor"),
@@ -203,15 +207,51 @@ function updateStateRing(magnitude) {
 }
 
 function updateSafetyPanel(s) {
-  setChip(els.chipIntensity, `INTENSITY ${s.intensityLimit}%`, s.intensityLimit > 85 ? "danger" : s.intensityLimit > 70 ? "warn" : "ok");
-  setChip(els.chipSafeMode, `MODE ${s.mode}`, s.mode === "SAFE" ? "warn" : "ok");
-  setChip(els.chipPacketLoss, `LOSS ${num(s.packetLossPct, 1)}%`, s.packetLossPct > 15 ? "danger" : s.packetLossPct > 5 ? "warn" : "ok");
-  setChip(els.chipImuHealth, `IMU ${s.fault === 0 ? "HEALTHY" : "FAULT"}`, s.fault === 0 ? "ok" : "danger");
+  const intensityLevel = s.intensityLimit > 85 ? "danger" : s.intensityLimit > 70 ? "warn" : "ok";
+  const modeLevel = s.mode === "SAFE" ? "warn" : "ok";
+  const lossLevel = s.packetLossPct > 15 ? "danger" : s.packetLossPct > 5 ? "warn" : "ok";
+  const imuLevel = s.fault === 0 ? "ok" : "danger";
+
+  setChip(els.chipIntensity, "INTENSITY LIMIT", `${s.intensityLimit}%`, intensityLevel);
+  setChip(els.chipSafeMode, "OPERATING MODE", s.mode, modeLevel);
+  setChip(els.chipPacketLoss, "RF PACKET LOSS", `${num(s.packetLossPct, 1)}%`, lossLevel);
+  setChip(els.chipImuHealth, "IMU STATUS", s.fault === 0 ? "HEALTHY" : "FAULT", imuLevel);
+
+  const risk = riskScoreFromLevels([intensityLevel, modeLevel, lossLevel, imuLevel]);
+  const score = Math.max(0, 100 - risk);
+  els.safetyScore.textContent = `${score}%`;
+  els.safetyScore.className = `safety-score ${score >= 85 ? "ok" : score >= 65 ? "warn" : "danger"}`;
+  els.riskMeterFill.style.width = `${score}%`;
+  els.riskMeterFill.className = `risk-meter-fill ${score >= 85 ? "ok" : score >= 65 ? "warn" : "danger"}`;
+
+  const state = score >= 85 ? "STATE: SAFE" : score >= 65 ? "STATE: CAUTION" : "STATE: CRITICAL";
+  const hint = buildSafetyHint({ intensityLevel, modeLevel, lossLevel, imuLevel });
+  els.safetyState.textContent = state;
+  els.safetyState.className = `safety-state ${score >= 85 ? "ok" : score >= 65 ? "warn" : "danger"}`;
+  els.safetyHint.textContent = hint;
 }
 
-function setChip(el, text, level) {
-  el.textContent = text;
+function setChip(el, label, value, level) {
+  el.innerHTML = `<span class="chip-label">${label}</span><span class="chip-value">${value}</span>`;
   el.className = `safety-chip ${level}`;
+}
+
+function riskScoreFromLevels(levels) {
+  return levels.reduce((sum, level) => {
+    if (level === "danger") return sum + 35;
+    if (level === "warn") return sum + 15;
+    return sum;
+  }, 0);
+}
+
+function buildSafetyHint(levels) {
+  if (levels.imuLevel === "danger") return "IMU fault detected. Switch to SAFE mode and verify sensor wiring.";
+  if (levels.lossLevel === "danger") return "High RF packet loss. Reduce distance/noise and check module power.";
+  if (levels.intensityLevel === "danger") return "Intensity is very high. Lower intensity limit to reduce user risk.";
+  if (levels.modeLevel === "warn") return "SAFE mode active. Resume NORMAL when diagnostics are stable.";
+  if (levels.lossLevel === "warn") return "RF link quality is moderate. Keep transmitter orientation consistent.";
+  if (levels.intensityLevel === "warn") return "Intensity near upper bound. Monitor comfort during calibration.";
+  return "All systems in safe range. Continue calibration or live demo.";
 }
 
 function updatePacketStats(source) {

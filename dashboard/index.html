@@ -45,11 +45,22 @@
 
       <article class="panel safety-panel">
         <h3>Live Safety Panel</h3>
+        <div class="safety-head">
+          <p>System Safety Score</p>
+          <span id="safetyScore">--</span>
+        </div>
+        <div class="risk-meter">
+          <div id="riskMeterFill" class="risk-meter-fill"></div>
+        </div>
+        <div class="safety-summary">
+          <p id="safetyState">STATE: --</p>
+          <p id="safetyHint">Waiting for telemetry...</p>
+        </div>
         <div class="safety-grid">
           <div class="safety-chip" id="chipIntensity">INTENSITY LIMIT</div>
-          <div class="safety-chip" id="chipSafeMode">SAFE MODE</div>
-          <div class="safety-chip" id="chipPacketLoss">PACKET LOSS</div>
-          <div class="safety-chip" id="chipImuHealth">IMU HEALTH</div>
+          <div class="safety-chip" id="chipSafeMode">OPERATING MODE</div>
+          <div class="safety-chip" id="chipPacketLoss">RF PACKET LOSS</div>
+          <div class="safety-chip" id="chipImuHealth">IMU STATUS</div>
         </div>
       </article>
     </section>
