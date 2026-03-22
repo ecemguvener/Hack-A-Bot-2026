@@ -1,233 +1,200 @@
-"""
-SteadiARM – Glove Pi (Pico 2)
-BMI160 IMU integration + tremor detection
+# test_motor.py
+# Motor A (MX1508 H-bridge IN1/IN2) functional test for Pico 2
+#
+# Wiring:
+#   IN1 -> GP10
+#   IN2 -> GP11
+#   Motor A output -> motor terminals
+#   No ENA pin on MX1508; speed control via PWM on IN1/IN2
+#
+# Run on Pico connected to PC via USB (Thonny or mpremote).
+# Each test prints PASS/FAIL and what the motor should be doing.
 
-Wiring:
-    BMI160 SDA → GP0  (pin 1)
-    BMI160 SCL → GP1  (pin 2)
-    BMI160 VCC → 3.3V
-    BMI160 GND → GND
-    BMI160 SDO → GND  (I2C address 0x68)
-"""
-
-from machine import I2C, Pin
 import time
-import math
+from machine import Pin, PWM
 
-# ══════════════════════════════════════════════════════════════════════════════
-# BMI160 DRIVER
-# ══════════════════════════════════════════════════════════════════════════════
+# --- Pin config ---
+IN1 = PWM(Pin(10))
+IN2 = PWM(Pin(11))
+IN1.freq(1000)
+IN2.freq(1000)
 
-_REG_CHIP_ID    = 0x00
-_REG_DATA_GYR   = 0x0C   # 6 bytes: gyr x/y/z LSB+MSB
-_REG_DATA_ACC   = 0x12   # 6 bytes: acc x/y/z LSB+MSB
-_REG_ACC_CONF   = 0x40
-_REG_ACC_RANGE  = 0x41
-_REG_GYR_CONF   = 0x42
-_REG_GYR_RANGE  = 0x43
-_REG_CMD        = 0x7E
-
-_CMD_ACC_NORMAL = 0x11
-_CMD_GYR_NORMAL = 0x15
-_CMD_SOFTRESET  = 0xB6
-
-_ACC_CONF_100HZ = 0x28   # ODR = 100 Hz, normal avg
-_GYR_CONF_100HZ = 0x28
-_ACC_RANGE_2G   = 0x03   # ±2 g
-_GYR_RANGE_125  = 0x04   # ±125 °/s
-
-_ACCEL_SCALE    = 9.80665 / 16384.0   # m/s² per LSB
-_GYRO_SCALE     = 1.0 / 262.4         # °/s  per LSB
-
-_I2C_ADDR       = 0x68
+# No ENA pin for MX1508
 
 
-class BMI160:
-    def __init__(self, i2c, addr=_I2C_ADDR):
-        self._i2c  = i2c
-        self._addr = addr
-        self._init()
+# --- Low-level helpers ---
 
-    def _write(self, reg, val):
-        self._i2c.writeto(self._addr, bytes([reg, val]))
+def motor_forward(speed=1.0):
+    """Forward at given speed (0.0 to 1.0)."""
+    duty = int(speed * 65535)
+    IN1.duty_u16(duty)
+    IN2.duty_u16(0)
 
-    def _read(self, reg, n):
-        self._i2c.writeto(self._addr, bytes([reg]))
-        buf = bytearray(n)
-        self._i2c.readfrom_into(self._addr, buf)
-        return buf
+def motor_backward(speed=1.0):
+    """Backward at given speed (0.0 to 1.0)."""
+    duty = int(speed * 65535)
+    IN1.duty_u16(0)
+    IN2.duty_u16(duty)
 
-    @staticmethod
-    def _s16(lo, hi):
-        v = (hi << 8) | lo
-        return v - 65536 if v >= 32768 else v
+def motor_stop():
+    """Brake: both pins HIGH (active stop)."""
+    IN1.duty_u16(65535)
+    IN2.duty_u16(65535)
 
-    def _init(self):
-        self._write(_REG_CMD, _CMD_SOFTRESET)
-        time.sleep_ms(100)
-        cid = self._read(_REG_CHIP_ID, 1)[0]
-        if cid != 0xD1:
-            raise RuntimeError(f"BMI160 not found (chip_id=0x{cid:02X}, expected 0xD1)")
-        self._write(_REG_CMD, _CMD_ACC_NORMAL);  time.sleep_ms(5)
-        self._write(_REG_CMD, _CMD_GYR_NORMAL);  time.sleep_ms(80)
-        self._write(_REG_ACC_CONF,  _ACC_CONF_100HZ)
-        self._write(_REG_ACC_RANGE, _ACC_RANGE_2G)
-        self._write(_REG_GYR_CONF,  _GYR_CONF_100HZ)
-        self._write(_REG_GYR_RANGE, _GYR_RANGE_125)
-        time.sleep_ms(10)
-
-    def chip_id(self):
-        return self._read(_REG_CHIP_ID, 1)[0]
-
-    def read_all(self):
-        """Returns (ax, ay, az m/s², gx, gy, gz °/s) in one burst read."""
-        raw = self._read(_REG_DATA_GYR, 12)   # gyr[0:6] + acc[6:12]
-        gx = self._s16(raw[0],  raw[1])  * _GYRO_SCALE
-        gy = self._s16(raw[2],  raw[3])  * _GYRO_SCALE
-        gz = self._s16(raw[4],  raw[5])  * _GYRO_SCALE
-        ax = self._s16(raw[6],  raw[7])  * _ACCEL_SCALE
-        ay = self._s16(raw[8],  raw[9])  * _ACCEL_SCALE
-        az = self._s16(raw[10], raw[11]) * _ACCEL_SCALE
-        return ax, ay, az, gx, gy, gz
+def motor_coast():
+    """Coast: both pins LOW (free spin)."""
+    IN1.duty_u16(0)
+    IN2.duty_u16(0)
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# TREMOR DETECTION
-# ══════════════════════════════════════════════════════════════════════════════
+# --- Tests ---
 
-_TREMOR_FMIN = 2.0    # Hz – lowest plausible tremor frequency
-_TREMOR_FMAX = 15.0   # Hz – highest plausible tremor frequency
-_HP_TAU      = 0.1    # s  – high-pass time constant (~1.6 Hz cutoff)
-_FREQ_ALPHA  = 0.3    # EMA weight for frequency smoothing
-
-
-class _HighPass:
-    """Single-pole high-pass IIR: y[n] = alpha*(y[n-1] + x[n] - x[n-1])"""
-    def __init__(self, tau, dt):
-        self._a = tau / (tau + dt)
-        self._px = None
-        self._py = 0.0
-
-    def reset(self):
-        self._px = None;  self._py = 0.0
-
-    def filter(self, x):
-        if self._px is None:
-            self._px = x;  return 0.0
-        y = self._a * (self._py + x - self._px)
-        self._px = x;  self._py = y
-        return y
+def test_forward(duration=2.0):
+    """Motor should spin in one direction for duration seconds."""
+    print("\n[TEST] Forward")
+    print(f"  -> Motor should spin FORWARD for {duration}s")
+    motor_forward()
+    time.sleep(duration)
+    motor_stop()
+    result = input("  Did the motor spin? (y/n): ").strip().lower()
+    if result == 'y':
+        print("  PASS")
+        return True
+    print("  FAIL")
+    return False
 
 
-class TremorResult:
-    __slots__ = ("freq_hz", "magnitude", "axis", "axis_sign")
-    def __init__(self, freq_hz, magnitude, axis, axis_sign):
-        self.freq_hz   = freq_hz    # Hz
-        self.magnitude = magnitude  # m/s² RMS
-        self.axis      = axis       # 0=x, 1=y, 2=z
-        self.axis_sign = axis_sign  # +1 or -1
-
-    def __repr__(self):
-        name = ("X", "Y", "Z")[self.axis]
-        sign = "+" if self.axis_sign >= 0 else "-"
-        return (f"f={self.freq_hz:.2f} Hz  "
-                f"mag={self.magnitude:.4f} m/s²  "
-                f"axis={sign}{name}")
-
-
-class TremorDetector:
-    def __init__(self, sample_rate_hz=100, window_sec=1.5):
-        self._fs  = sample_rate_hz
-        self._dt  = 1.0 / sample_rate_hz
-        self._n   = int(sample_rate_hz * window_sec)
-        self._win = window_sec
-
-        self._buf  = [[0.0] * self._n for _ in range(3)]
-        self._filt = [[0.0] * self._n for _ in range(3)]
-        self._hp   = [_HighPass(_HP_TAU, self._dt) for _ in range(3)]
-        self._idx  = 0
-        self._cnt  = 0
-        self._smooth_freq = 0.0
-
-    def update(self, ax, ay, az):
-        raw = (ax, ay, az)
-        for i in range(3):
-            self._buf[i][self._idx]  = raw[i]
-            self._filt[i][self._idx] = self._hp[i].filter(raw[i])
-        self._idx = (self._idx + 1) % self._n
-        if self._cnt < self._n:
-            self._cnt += 1
-
-    def ready(self):
-        return self._cnt >= self._n
-
-    def analyse(self):
-        if not self.ready():
-            return None
-
-        # RMS per axis on filtered signal → dominant axis
-        rms = [math.sqrt(sum(v*v for v in self._filt[i]) / self._n) for i in range(3)]
-        dom = rms.index(max(rms))
-
-        # Mean of raw signal gives dominant direction sign
-        raw_mean  = sum(self._buf[dom]) / self._n
-        axis_sign = 1 if raw_mean >= 0 else -1
-
-        # Zero-crossing frequency on filtered dominant axis
-        samples   = self._ordered(self._filt[dom])
-        crossings = sum(1 for j in range(1, self._n) if samples[j-1]*samples[j] < 0)
-        freq      = (crossings / 2.0) / self._win
-
-        if _TREMOR_FMIN <= freq <= _TREMOR_FMAX:
-            self._smooth_freq = _FREQ_ALPHA * freq + (1 - _FREQ_ALPHA) * self._smooth_freq
-
-        return TremorResult(self._smooth_freq, rms[dom], dom, axis_sign)
-
-    def _ordered(self, buf):
-        """Return circular buffer as a list, oldest → newest."""
-        return [buf[(self._idx + i) % self._n] for i in range(self._n)]
+def test_backward(duration=2.0):
+    """Motor should spin in the opposite direction for duration seconds."""
+    print("\n[TEST] Backward")
+    print(f"  -> Motor should spin BACKWARD for {duration}s")
+    motor_backward()
+    time.sleep(duration)
+    motor_stop()
+    result = input("  Did the motor spin in reverse? (y/n): ").strip().lower()
+    if result == 'y':
+        print("  PASS")
+        return True
+    print("  FAIL")
+    return False
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# MAIN – sample loop
-# ══════════════════════════════════════════════════════════════════════════════
+def test_stop():
+    """Motor should brake immediately after running."""
+    print("\n[TEST] Stop (brake)")
+    print("  -> Motor will run forward for 1s then brake")
+    motor_forward()
+    time.sleep(1.0)
+    motor_stop()
+    result = input("  Did the motor stop quickly (brake)? (y/n): ").strip().lower()
+    if result == 'y':
+        print("  PASS")
+        return True
+    print("  FAIL")
+    return False
 
-SAMPLE_RATE_HZ  = 100
-SAMPLE_PERIOD_MS = 1000 // SAMPLE_RATE_HZ   # 10 ms
 
-i2c = I2C(0, sda=Pin(0), scl=Pin(1), freq=400_000)
-imu = BMI160(i2c)
-print(f"BMI160 chip_id = 0x{imu.chip_id():02X}  (expect 0xD1)")
+def test_coast():
+    """Motor should coast (spin freely) after running."""
+    print("\n[TEST] Coast (free spin)")
+    print("  -> Motor will run forward for 1s then coast")
+    motor_forward()
+    time.sleep(1.0)
+    motor_coast()
+    result = input("  Did the motor coast (spin down slowly)? (y/n): ").strip().lower()
+    if result == 'y':
+        print("  PASS")
+        return True
+    print("  FAIL")
+    return False
 
-td = TremorDetector(sample_rate_hz=SAMPLE_RATE_HZ, window_sec=1.5)
 
-print("\nSampling at 100 Hz — Ctrl-C to stop\n")
-print(f"{'ax':>8} {'ay':>8} {'az':>8}  {'gx':>8} {'gy':>8} {'gz':>8}   tremor analysis")
-print("-" * 90)
+def test_direction_change():
+    """Motor should reverse direction without stopping."""
+    print("\n[TEST] Direction change (forward -> reverse)")
+    print("  -> Forward 1.5s, then immediately reverse 1.5s")
+    motor_forward()
+    time.sleep(1.5)
+    motor_backward()
+    time.sleep(1.5)
+    motor_stop()
+    result = input("  Did the motor change direction? (y/n): ").strip().lower()
+    if result == 'y':
+        print("  PASS")
+        return True
+    print("  FAIL")
+    return False
 
-sample_count = 0
-t_next = time.ticks_ms()
 
-try:
-    while True:
-        now  = time.ticks_ms()
-        wait = time.ticks_diff(t_next, now)
-        if wait > 0:
-            time.sleep_ms(wait)
-        t_next = time.ticks_add(t_next, SAMPLE_PERIOD_MS)
+def test_speed_pwm():
+    """
+    PWM speed sweep test for MX1508.
+    Sweeps from 10% to 100% duty cycle in steps.
+    """
+    print("\n[TEST] PWM speed sweep (MX1508)")
+    print("  Sweeping speed 10% -> 100% -> 10%")
 
-        ax, ay, az, gx, gy, gz = imu.read_all()
-        td.update(ax, ay, az)
-        sample_count += 1
+    for pct in list(range(10, 101, 10)) + list(range(100, 9, -10)):
+        speed = pct / 100.0
+        motor_forward(speed)
+        print(f"    {pct}% speed", end="\r")
+        time.sleep(0.4)
 
-        # Print at ~10 Hz
-        if sample_count % 10 == 0:
-            info = ""
-            if td.ready():
-                r = td.analyse()
-                if r:
-                    info = f"   {r}"
-            print(f"{ax:8.4f} {ay:8.4f} {az:8.4f}  {gx:8.3f} {gy:8.3f} {gz:8.3f}{info}")
+    motor_stop()
 
-except KeyboardInterrupt:
-    print("\nStopped.")
+    result = input("\n  Did the motor speed change smoothly? (y/n): ").strip().lower()
+    if result == 'y':
+        print("  PASS")
+        return True
+    print("  FAIL")
+    return False
+
+
+def test_rapid_toggle(count=10):
+    """Rapidly toggle forward/backward to stress-test the driver."""
+    print(f"\n[TEST] Rapid direction toggle x{count}")
+    print("  -> Toggling direction rapidly (100ms each)")
+    for i in range(count):
+        motor_forward()
+        time.sleep(0.1)
+        motor_backward()
+        time.sleep(0.1)
+    motor_stop()
+    print("  -> Done. Check motor and driver board are not hot.")
+    result = input("  Board and motor survived? (y/n): ").strip().lower()
+    if result == 'y':
+        print("  PASS")
+        return True
+    print("  FAIL")
+    return False
+
+
+# --- Run all tests ---
+
+def run_all():
+    print("=" * 40)
+    print("  Motor Board Integration Test")
+    print("  MX1508: IN1=GP10, IN2=GP11")
+    print("=" * 40)
+
+    results = {}
+    results["forward"]          = test_forward()
+    results["backward"]         = test_backward()
+    results["stop"]             = test_stop()
+    results["coast"]            = test_coast()
+    results["direction_change"] = test_direction_change()
+    results["speed_pwm"]        = test_speed_pwm()
+    results["rapid_toggle"]     = test_rapid_toggle()
+
+    motor_coast()  # safe final state
+
+    print("\n" + "=" * 40)
+    print("  Results Summary")
+    print("=" * 40)
+    for name, r in results.items():
+        status = "PASS" if r else ("SKIP" if r is None else "FAIL")
+        print(f"  {name:<20} {status}")
+    print("=" * 40)
+
+
+run_all()
