@@ -1,12 +1,11 @@
 # test_motor.py
-# Motor A (H-bridge IN1/IN2) functional test for Pico 2
+# Motor A (MX1508 H-bridge IN1/IN2) functional test for Pico 2
 #
 # Wiring:
 #   IN1 -> GP10
 #   IN2 -> GP11
 #   Motor A output -> motor terminals
-#   ENA pin: if your board has an ENA jumper, leave it bridged (full speed)
-#            or wire ENA -> GP12 to enable PWM speed control (see test_speed_pwm)
+#   No ENA pin on MX1508; speed control via PWM on IN1/IN2
 #
 # Run on Pico connected to PC via USB (Thonny or mpremote).
 # Each test prints PASS/FAIL and what the motor should be doing.
@@ -15,32 +14,37 @@ import time
 from machine import Pin, PWM
 
 # --- Pin config ---
-IN1 = Pin(10, Pin.OUT)
-IN2 = Pin(11, Pin.OUT)
+IN1 = PWM(Pin(10))
+IN2 = PWM(Pin(11))
+IN1.freq(1000)
+IN2.freq(1000)
 
-# Optional: only needed if ENA jumper is removed and ENA is wired to GP12
-ENA_PIN = 12
+# No ENA pin for MX1508
 
 
 # --- Low-level helpers ---
 
-def motor_forward():
-    IN1.value(1)
-    IN2.value(0)
+def motor_forward(speed=1.0):
+    """Forward at given speed (0.0 to 1.0)."""
+    duty = int(speed * 65535)
+    IN1.duty_u16(duty)
+    IN2.duty_u16(0)
 
-def motor_backward():
-    IN1.value(0)
-    IN2.value(1)
+def motor_backward(speed=1.0):
+    """Backward at given speed (0.0 to 1.0)."""
+    duty = int(speed * 65535)
+    IN1.duty_u16(0)
+    IN2.duty_u16(duty)
 
 def motor_stop():
     """Brake: both pins HIGH (active stop)."""
-    IN1.value(1)
-    IN2.value(1)
+    IN1.duty_u16(65535)
+    IN2.duty_u16(65535)
 
 def motor_coast():
     """Coast: both pins LOW (free spin)."""
-    IN1.value(0)
-    IN2.value(0)
+    IN1.duty_u16(0)
+    IN2.duty_u16(0)
 
 
 # --- Tests ---
@@ -122,34 +126,21 @@ def test_direction_change():
     return False
 
 
-def test_speed_pwm(ena_gpio=ENA_PIN):
+def test_speed_pwm():
     """
-    PWM speed sweep test.
-    Only run this if ENA jumper is REMOVED and ENA is wired to ena_gpio.
+    PWM speed sweep test for MX1508.
     Sweeps from 10% to 100% duty cycle in steps.
     """
-    print(f"\n[TEST] PWM speed sweep (ENA on GP{ena_gpio})")
-    print("  NOTE: Skip this if ENA jumper is still bridged on the board.")
-    skip = input("  Skip this test? (y/n): ").strip().lower()
-    if skip == 'y':
-        print("  SKIPPED")
-        return None
-
-    ena = PWM(Pin(ena_gpio))
-    ena.freq(1000)  # 1 kHz PWM
-
-    motor_forward()
+    print("\n[TEST] PWM speed sweep (MX1508)")
     print("  Sweeping speed 10% -> 100% -> 10%")
 
     for pct in list(range(10, 101, 10)) + list(range(100, 9, -10)):
-        duty = int(pct / 100 * 65535)
-        ena.duty_u16(duty)
-        print(f"    {pct}% duty", end="\r")
+        speed = pct / 100.0
+        motor_forward(speed)
+        print(f"    {pct}% speed", end="\r")
         time.sleep(0.4)
 
     motor_stop()
-    ena.duty_u16(0)
-    ena.deinit()
 
     result = input("\n  Did the motor speed change smoothly? (y/n): ").strip().lower()
     if result == 'y':
@@ -183,7 +174,7 @@ def test_rapid_toggle(count=10):
 def run_all():
     print("=" * 40)
     print("  Motor Board Integration Test")
-    print("  H-bridge: IN1=GP10, IN2=GP11")
+    print("  MX1508: IN1=GP10, IN2=GP11")
     print("=" * 40)
 
     results = {}
