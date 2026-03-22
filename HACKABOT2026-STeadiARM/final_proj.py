@@ -15,7 +15,9 @@ PURPOSE:
 
 HARDWARE (on this Pico):
     - 1x BMI160 IMU  (I2C)
-    - 4x N20 DC motors via MX1508 H-bridge driver
+    - 2x N20 DC motors driven by 1x MX1508 dual H-bridge board:
+        Board  IN1/IN2 -> Motor A  (one side of the hand)
+        Board  IN3/IN4 -> Motor B  (opposing side of the hand)
     - 1x FS1000A 433 MHz transmitter
     - 1x XY-MK-5V 433 MHz receiver  (needs 3.3 V level-shifter on DATA)
 ===========================================================================
@@ -39,14 +41,14 @@ import struct
 # ===========================================================================
 
 # ---- BMI160 IMU (I2C bus 0) ----
-IMU_SDA_PIN = 0        # GP0  -> BMI160 SDA
-IMU_SCL_PIN = 1        # GP1  -> BMI160 SCL
+IMU_SDA_PIN = 14        # GP14 -> BMI160 SDA
+IMU_SCL_PIN = 15        # GP15 -> BMI160 SCL
 IMU_I2C_BUS = 0        # I2C peripheral 0
 IMU_ADDR    = 0x68     # 0x68 when SDO->GND,  0x69 when SDO->3.3V
 IMU_FREQ    = 400_000  # 400 kHz fast-mode I2C
 
 # ---- 433 MHz Transmitter (FS1000A) - glove sends telemetry to base ----
-TX_PIN = 10            # GP10 -> FS1000A DATA pin
+TX_PIN = 13            # GP13 -> FS1000A DATA pin
                        # FS1000A VCC -> 3.3V,  GND -> GND
 
 # ---- 433 MHz Receiver (XY-MK-5V) - base sends config back to glove ----
@@ -55,21 +57,22 @@ TX_PIN = 10            # GP10 -> FS1000A DATA pin
 #   NPN collector -> GP11 with 10k pull-up to 3.3V
 RX_PIN = 11            # GP11 -> XY-MK-5V DATA (after level-shift)
 
-# ---- Motor A - DORSAL (back of hand) ----
-MOTOR_A_IN1 = 2        # GP2  -> MX1508 IN1
-MOTOR_A_IN2 = 3        # GP3  -> MX1508 IN2
+# -----------------------------------------------------------------------
+# MOTOR DRIVER BOARD  (1x MX1508 dual H-bridge)
+# The MX1508 has 4 input pins that drive 2 independent motor channels:
+#   IN1 + IN2  ->  Channel A  (Motor A)
+#   IN3 + IN4  ->  Channel B  (Motor B)
+# Mount Motor A and Motor B on opposing sides of the hand/wrist so that
+# each motor can counteract tremor from its opposite side.
+# -----------------------------------------------------------------------
 
-# ---- Motor B - VOLAR (palm side) ----
-MOTOR_B_IN1 = 4        # GP4  -> MX1508 IN1
-MOTOR_B_IN2 = 5        # GP5  -> MX1508 IN2
+# ---- MX1508 Channel A - Motor A (one side of the hand) ----
+BOARD_IN1 = 6          # GP2  -> MX1508 IN1
+BOARD_IN2 = 2          # GP3  -> MX1508 IN2
 
-# ---- Motor C - RADIAL (thumb side) ----
-MOTOR_C_IN1 = 6        # GP6  -> MX1508 IN1
-MOTOR_C_IN2 = 7        # GP7  -> MX1508 IN2
-
-# ---- Motor D - ULNAR (little-finger side) ----
-MOTOR_D_IN1 = 8        # GP8  -> MX1508 IN1
-MOTOR_D_IN2 = 9        # GP9  -> MX1508 IN2
+# ---- MX1508 Channel B - Motor B (opposing side of the hand) ----
+BOARD_IN3 = 1          # GP4  -> MX1508 IN3
+BOARD_IN4 = 4          # GP5  -> MX1508 IN4
 
 # ---- Onboard status LED ----
 LED_PIN = 25           # GP25 -> Pico 2 onboard LED (no resistor needed)
@@ -329,12 +332,16 @@ class TremorDetector:
 
 
 # ===========================================================================
-# STEP 4 - MOTOR CONTROLLER  (MX1508 H-bridge, 4x N20 DC motors)
+# STEP 4 - MOTOR CONTROLLER  (1x MX1508 dual H-bridge board, 2x N20 motors)
 # ---------------------------------------------------------------------------
-# Each N20 motor is driven by two PWM pins (IN1, IN2) on one MX1508 channel.
-#   Drive forward:  IN1 = duty,  IN2 = 0
-#   Brake:          IN1 = max,   IN2 = max
-#   Coast (idle):   IN1 = 0,     IN2 = 0
+# The single MX1508 board drives both motors via its four input pins:
+#   Channel A:  IN1 + IN2  ->  Motor A
+#   Channel B:  IN3 + IN4  ->  Motor B
+#
+# Per-channel drive logic:
+#   Drive forward:  IN_A = duty,  IN_B = 0
+#   Brake:          IN_A = max,   IN_B = max
+#   Coast (idle):   IN_A = 0,     IN_B = 0
 #
 # Vibration is produced by pulsing each motor ON/OFF at f_motor Hz using a
 # phase accumulator that runs in step with the 100 Hz control loop.
@@ -343,24 +350,20 @@ class TremorDetector:
 _MOTOR_CARRIER_HZ = 1000  # PWM carrier frequency (smooth motor drive)
 
 # Motor ID constants - used throughout the code
-MOTOR_DORSAL = 0   # back of hand  (+Z anatomical side)
-MOTOR_VOLAR  = 1   # palm side     (-Z anatomical side)
-MOTOR_RADIAL = 2   # thumb side    (+X anatomical side)
-MOTOR_ULNAR  = 3   # pinky side    (-X anatomical side)
-MOTOR_NAMES  = ["DORSAL", "VOLAR", "RADIAL", "ULNAR"]
+MOTOR_A = 0   # MX1508 Channel A  (IN1/IN2) - one side of the hand
+MOTOR_B = 1   # MX1508 Channel B  (IN3/IN4) - opposing side of the hand
+MOTOR_NAMES = ["MOTOR_A", "MOTOR_B"]
 
-# Pin pair (IN1, IN2) for each motor - must match STEP 1 assignments above
+# Pin pairs (IN_pos, IN_neg) for each motor channel
 _MOTOR_PINS = [
-    (MOTOR_A_IN1, MOTOR_A_IN2),   # Motor 0 - DORSAL
-    (MOTOR_B_IN1, MOTOR_B_IN2),   # Motor 1 - VOLAR
-    (MOTOR_C_IN1, MOTOR_C_IN2),   # Motor 2 - RADIAL
-    (MOTOR_D_IN1, MOTOR_D_IN2),   # Motor 3 - ULNAR
+    (BOARD_IN1, BOARD_IN2),   # Motor A - MX1508 Channel A
+    (BOARD_IN3, BOARD_IN4),   # Motor B - MX1508 Channel B
 ]
 
 
 class MotorController:
     """
-    Controls all 4 N20 motors via MX1508 H-bridge drivers.
+    Controls both N20 motors via the single MX1508 H-bridge board.
     Vibration is created by pulsing motor ON/OFF at the desired frequency.
     Call update_vibration() once per IMU sample to advance the phase.
     """
@@ -658,13 +661,17 @@ _AXIS_Y = 1
 _AXIS_Z = 2
 
 # (axis, sign) -> motor_id to activate (the motor opposing the tremor)
+# With only 2 motors the rule is simple:
+#   positive tremor direction -> Motor B opposes
+#   negative tremor direction -> Motor A opposes
+# When you physically mount the motors, orient them so A and B face each other.
 TREMOR_TO_MOTOR_MAP = {
-    (_AXIS_X, +1): MOTOR_ULNAR,    # +X tremor (radial side)  -> oppose with ULNAR
-    (_AXIS_X, -1): MOTOR_RADIAL,   # -X tremor (ulnar side)   -> oppose with RADIAL
-    (_AXIS_Y, +1): MOTOR_VOLAR,    # +Y tremor (dorsal)       -> oppose with VOLAR
-    (_AXIS_Y, -1): MOTOR_DORSAL,   # -Y tremor (volar)        -> oppose with DORSAL
-    (_AXIS_Z, +1): MOTOR_VOLAR,    # +Z tremor (upward)       -> oppose with VOLAR
-    (_AXIS_Z, -1): MOTOR_DORSAL,   # -Z tremor (downward)     -> oppose with DORSAL
+    (_AXIS_X, +1): MOTOR_B,   # +X tremor -> oppose with Motor B
+    (_AXIS_X, -1): MOTOR_A,   # -X tremor -> oppose with Motor A
+    (_AXIS_Y, +1): MOTOR_B,   # +Y tremor -> oppose with Motor B
+    (_AXIS_Y, -1): MOTOR_A,   # -Y tremor -> oppose with Motor A
+    (_AXIS_Z, +1): MOTOR_B,   # +Z tremor -> oppose with Motor B
+    (_AXIS_Z, -1): MOTOR_A,   # -Z tremor -> oppose with Motor A
 }
 
 # RMS magnitude that maps to 100% motor intensity.
@@ -675,7 +682,7 @@ MAGNITUDE_SCALE = 2.0   # m/s^2
 def select_motor(tremor_result):
     """Return the motor ID that should oppose the detected tremor."""
     key = (tremor_result.axis, tremor_result.axis_sign)
-    return TREMOR_TO_MOTOR_MAP.get(key, MOTOR_DORSAL)
+    return TREMOR_TO_MOTOR_MAP.get(key, MOTOR_A)
 
 
 def calc_intensity(tremor_result, intensity_limit):
@@ -755,7 +762,7 @@ print("Entering closed-loop at 100 Hz. Ctrl-C to stop.")
 print()
 
 sample_count  = 0
-active_motor  = MOTOR_DORSAL   # current active motor
+active_motor  = MOTOR_A        # current active motor
 f_motor_hz    = 0.0            # current motor vibration frequency
 intensity     = 0.0            # current motor intensity
 last_result   = None           # most recent TremorResult (cached)
@@ -821,7 +828,7 @@ try:
             f_motor_hz = 0.0
             intensity = 0.0
             latched_valid = False
-        for mid in range(4):
+        for mid in range(2):
             if mid == active_motor and f_motor_hz > 0 and (config.mode != SystemConfig.MODE_CONTINUOUS or latched_valid):
                 motors.update_vibration(mid, f_motor_hz, intensity, SAMPLE_RATE_HZ)
             else:
