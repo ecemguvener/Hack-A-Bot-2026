@@ -17,10 +17,15 @@ HARDWARE (on this Pico):
     - USB connection to PC (for telemetry output + config input)
 
 PC -> BASE PICO COMMANDS  (type into the serial terminal and press Enter):
-    k=<value>       Set k_factor           e.g.  k=3.5
-    mode=<0 or 1>   Set mode (0=normal,    e.g.  mode=1
-                              1=calibration)
-    limit=<value>   Set intensity limit    e.g.  limit=0.8
+    k=<value>       Set k_factor               e.g.  k=3.5
+    mode=<0..3>     Set mode                   e.g.  mode=2
+                    0=normal closed-loop
+                    1=calibration
+                    2=continuous ON (latched vibration until OFF)
+                    3=OFF (motors forced off)
+    on              Shortcut for mode=2
+    off             Shortcut for mode=3
+    limit=<value>   Set intensity limit        e.g.  limit=0.8
     status          Print current config
 ===========================================================================
 """
@@ -66,7 +71,7 @@ LED_PIN = 25   # GP25 -> Pico 2 onboard LED
 #   motor_id   uint8   0-3
 #   f_motor    uint16  Hz x 100
 #   k_factor   uint8   k x 10
-#   mode       uint8   0=normal, 1=calibration
+#   mode       uint8   0=normal, 1=calibration, 2=continuous_on, 3=off
 # ===========================================================================
 
 _RX_BIT_US   = 2000              # must match final_proj.py TX settings
@@ -156,6 +161,8 @@ def decode_telemetry(raw: bytes) -> dict:
     ft, mag, ax_byte, motor_id, fm, k, mode = struct.unpack(_TELEM_FMT, raw)
     axis      = (ax_byte >> 4) & 0x0F
     axis_sign = -1 if (ax_byte & 0x01) else 1
+    mode_label = ("normal", "calibration", "continuous_on", "off")
+    mode_str = mode_label[mode] if 0 <= mode < len(mode_label) else f"mode{mode}"
     return {
         "f_tremor"  : ft  / 100.0,
         "magnitude" : mag / 100.0,
@@ -164,7 +171,7 @@ def decode_telemetry(raw: bytes) -> dict:
         "motor_id"  : motor_id,
         "f_motor"   : fm  / 100.0,
         "k_factor"  : k   / 10.0,
-        "mode"      : "calibration" if mode else "normal",
+        "mode"      : mode_str,
     }
 
 
@@ -172,7 +179,7 @@ def decode_telemetry(raw: bytes) -> dict:
 # STEP 3 - 433 MHz TRANSMITTER  (FS1000A, base -> glove config packets)
 # ---------------------------------------------------------------------------
 # Config payload (3 bytes, big-endian) - must match receiver in final_proj.py:
-#   mode            uint8   0=normal, 1=calibration
+#   mode            uint8   0=normal, 1=calibration, 2=continuous_on, 3=off
 #   k_factor        uint8   k x 10        (e.g. 30 -> k=3.0)
 #   intensity_limit uint8   limit x 100   (e.g. 80 -> 0.80)
 # ===========================================================================
@@ -201,7 +208,7 @@ def rf_send_config(tx_pin, mode, k_factor, intensity_limit):
 
     Args:
         tx_pin          : machine.Pin in output mode
-        mode            : 0=normal, 1=calibration
+        mode            : 0=normal, 1=calibration, 2=continuous_on, 3=off
         k_factor        : frequency multiplier (e.g. 3.0)
         intensity_limit : motor intensity cap  (0.0 - 1.0)
     """
@@ -233,10 +240,18 @@ def rf_send_config(tx_pin, mode, k_factor, intensity_limit):
 #
 # Supported commands:
 #   k=<float>      update k_factor          e.g.  k=4.2
-#   mode=<0|1>     switch mode              e.g.  mode=1
+#   mode=<0..3>    switch mode              e.g.  mode=2
+#   on / off       quick continuous ON / OFF
 #   limit=<float>  update intensity limit   e.g.  limit=0.75
 #   status         print current config
 # ===========================================================================
+
+_MODE_LABEL = {
+    0: "normal",
+    1: "calibration",
+    2: "continuous_on",
+    3: "off",
+}
 
 def parse_pc_command(line: str, cfg: dict):
     """
@@ -247,15 +262,23 @@ def parse_pc_command(line: str, cfg: dict):
     line = line.strip()
 
     if line == "status":
-        print(f"[STATUS] mode={cfg['mode']}  "
+        print(f"[STATUS] mode={cfg['mode']}({_MODE_LABEL.get(cfg['mode'], cfg['mode'])})  "
               f"k={cfg['k_factor']:.1f}  "
               f"limit={cfg['intensity_limit']:.2f}")
         return False   # status request - no config change to send
 
     if "=" not in line:
+        if line.lower() == "on":
+            cfg["mode"] = 2
+            print("[CMD] mode set to continuous_on")
+            return True
+        if line.lower() == "off":
+            cfg["mode"] = 3
+            print("[CMD] mode set to off")
+            return True
         if line:
             print(f"[CMD?] Unknown: '{line}'  "
-                  "Try: k=3.5  mode=1  limit=0.8  status")
+                  "Try: k=3.5  mode=2  on  off  limit=0.8  status")
         return False
 
     key, _, val = line.partition("=")
@@ -273,11 +296,11 @@ def parse_pc_command(line: str, cfg: dict):
 
         elif key == "mode":
             v = int(val)
-            if v not in (0, 1):
-                print(f"[CMD ERR] mode must be 0 or 1, got {v}")
+            if v not in (0, 1, 2, 3):
+                print(f"[CMD ERR] mode must be 0..3, got {v}")
                 return False
             cfg["mode"] = v
-            print(f"[CMD] mode set to {'calibration' if v else 'normal'}")
+            print(f"[CMD] mode set to {_MODE_LABEL.get(v, v)}")
 
         elif key == "limit":
             v = float(val)
@@ -288,7 +311,7 @@ def parse_pc_command(line: str, cfg: dict):
             print(f"[CMD] intensity_limit set to {v:.2f}")
 
         else:
-            print(f"[CMD?] Unknown key '{key}'.  Try: k=  mode=  limit=  status")
+            print(f"[CMD?] Unknown key '{key}'.  Try: k=  mode=  on/off  limit=  status")
             return False
 
         return True   # a valid change was made -> caller should send to glove
@@ -325,7 +348,7 @@ print(f"[OK] RF TX ready     on GP{TX_PIN}")
 
 # Config state - operator changes these via serial, then they're sent to glove
 current_cfg = {
-    "mode"            : 0,    # 0=normal, 1=calibration
+    "mode"            : 0,    # 0=normal, 1=calibration, 2=continuous_on, 3=off
     "k_factor"        : 3.0,  # initial k (overridden by operator at runtime)
     "intensity_limit" : 1.0,  # initial intensity cap
 }
@@ -339,7 +362,7 @@ packet_count = 0
 
 print()
 print("Waiting for telemetry from glove Pico...")
-print("Commands: k=<val>  mode=<0|1>  limit=<val>  status")
+print("Commands: k=<val>  mode=<0..3>  on  off  limit=<val>  status")
 print()
 
 try:
