@@ -29,11 +29,6 @@ const els = {
   wizStep1: document.getElementById("wizStep1"),
   wizStep2: document.getElementById("wizStep2"),
   wizStep3: document.getElementById("wizStep3"),
-  recordStartBtn: document.getElementById("recordStartBtn"),
-  recordStopBtn: document.getElementById("recordStopBtn"),
-  replayBtn: document.getElementById("replayBtn"),
-  clearReplayBtn: document.getElementById("clearReplayBtn"),
-  replayStatus: document.getElementById("replayStatus"),
   modeInput: document.getElementById("modeInput"),
   kInput: document.getElementById("kInput"),
   intensityInput: document.getElementById("intensityInput"),
@@ -55,13 +50,6 @@ let totalPackets = 0;
 let missedPackets = 0;
 let lastPacketMs = 0;
 let wizardSuggestedK = null;
-
-const replayState = {
-  recording: false,
-  playing: false,
-  buffer: [],
-  timer: null,
-};
 
 const ringCircumference = 2 * Math.PI * 88;
 els.stateRingProgress.style.strokeDasharray = `${ringCircumference}`;
@@ -104,11 +92,6 @@ function onTelemetry(data, source = "live") {
     packetLossPct,
   });
 
-  if (replayState.recording && source === "live") {
-    replayState.buffer.push({ ...data, _ts: Date.now() });
-    trimReplayBuffer(60_000);
-    els.replayStatus.textContent = `Recording... ${replayState.buffer.length} samples`;
-  }
 }
 
 function pushPoint(chart, y) {
@@ -358,62 +341,6 @@ function clamp01(v) {
   return Math.min(1, Math.max(0, v));
 }
 
-function trimReplayBuffer(maxDurationMs) {
-  const now = Date.now();
-  replayState.buffer = replayState.buffer.filter((x) => now - x._ts <= maxDurationMs);
-}
-
-function startRecording() {
-  replayState.buffer = [];
-  replayState.recording = true;
-  els.replayStatus.textContent = "Recording started (max 60s window).";
-  log("Session recording started");
-}
-
-function stopRecording() {
-  replayState.recording = false;
-  els.replayStatus.textContent = `Recording stopped. ${replayState.buffer.length} samples saved.`;
-  log("Session recording stopped");
-}
-
-function replaySession() {
-  if (replayState.playing || replayState.buffer.length < 2) {
-    els.replayStatus.textContent = replayState.buffer.length < 2 ? "Need more recorded samples." : "Replay already running.";
-    return;
-  }
-  replayState.playing = true;
-  disconnect();
-  const baseTs = replayState.buffer[0]._ts;
-  const samples = replayState.buffer.map((s) => ({ ...s, _offset: s._ts - baseTs }));
-  let i = 0;
-  els.replayStatus.textContent = "Replay running...";
-  log("Session replay started");
-
-  const tick = () => {
-    if (i >= samples.length) {
-      replayState.playing = false;
-      replayState.timer = null;
-      els.replayStatus.textContent = "Replay complete.";
-      log("Session replay complete");
-      return;
-    }
-    onTelemetry(samples[i], "replay");
-    i += 1;
-    const delay = i < samples.length ? Math.max(25, samples[i]._offset - samples[i - 1]._offset) : 30;
-    replayState.timer = setTimeout(tick, delay);
-  };
-  tick();
-}
-
-function clearReplay() {
-  replayState.buffer = [];
-  replayState.recording = false;
-  if (replayState.timer) clearTimeout(replayState.timer);
-  replayState.playing = false;
-  els.replayStatus.textContent = "No session recorded.";
-  log("Session data cleared");
-}
-
 function markWizardStep(stepEl, state) {
   stepEl.className = `wizard-step ${state}`;
 }
@@ -487,10 +414,6 @@ els.wizardApplyBtn.addEventListener("click", () => {
   sendConfig({ k_factor: wizardSuggestedK, mode: "NORMAL" });
   log(`Applied wizard k=${wizardSuggestedK.toFixed(2)}`);
 });
-els.recordStartBtn.addEventListener("click", startRecording);
-els.recordStopBtn.addEventListener("click", stopRecording);
-els.replayBtn.addEventListener("click", replaySession);
-els.clearReplayBtn.addEventListener("click", clearReplay);
 els.safeStopBtn.addEventListener("click", () => {
   sendConfig({ mode: "SAFE", intensity_limit: 0 });
   els.modeInput.value = "SAFE";

@@ -167,8 +167,7 @@ button.danger {
 .state-hero,
 .safety-panel,
 .before-after,
-.wizard,
-.replay-panel {
+.wizard {
   padding: 12px;
   margin-bottom: 12px;
 }
@@ -398,7 +397,6 @@ button.danger {
 .log-wrap h3,
 .before-after h3,
 .wizard h3,
-.replay-panel h3,
 .state-hero h3,
 .safety-panel h3 {
   margin: 0 0 8px;
@@ -458,18 +456,10 @@ canvas {
   align-items: center;
 }
 
-#wizardResult,
-#replayStatus {
+#wizardResult {
   margin: 0;
   color: #b7e4ff;
   font-size: 13px;
-}
-
-.replay-controls {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(130px, 1fr));
-  gap: 8px;
-  margin-bottom: 8px;
 }
 
 .hint {
@@ -511,7 +501,6 @@ canvas {
   .charts { grid-template-columns: 1fr; }
   .wizard-steps { grid-template-columns: 1fr; }
   .wizard-controls { grid-template-columns: 1fr; }
-  .replay-controls { grid-template-columns: 1fr 1fr; }
   .control-grid { grid-template-columns: 1fr 1fr; }
   .connect-row { grid-template-columns: 1fr 1fr; }
 }
@@ -519,7 +508,6 @@ canvas {
 @media (max-width: 760px) {
   .kpis { grid-template-columns: 1fr 1fr; }
   .safety-grid { grid-template-columns: 1fr; }
-  .replay-controls { grid-template-columns: 1fr; }
   .control-grid { grid-template-columns: 1fr; }
   .connect-row { grid-template-columns: 1fr; }
   .footer-note p { text-align: left; }
