@@ -183,6 +183,15 @@ static inline void nrf_csn_high(void) { gpio_put(NRF_CSN_PIN, 1); }
 static inline void nrf_ce_low(void)   { gpio_put(NRF_CE_PIN, 0); }
 static inline void nrf_ce_high(void)  { gpio_put(NRF_CE_PIN, 1); }
 
+static uint8_t nrf_read_reg(uint8_t reg) {
+    uint8_t tx[2] = { (uint8_t)(NRF_CMD_R_REG | reg), NRF_CMD_NOP };
+    uint8_t rx[2] = {0, 0};
+    nrf_csn_low();
+    spi_write_read_blocking(NRF_SPI, tx, rx, 2);
+    nrf_csn_high();
+    return rx[1];
+}
+
 static uint8_t nrf_write_reg(uint8_t reg, uint8_t val) {
     uint8_t tx[2] = { (uint8_t)(NRF_CMD_W_REG | reg), val };
     uint8_t rx[2];
@@ -207,7 +216,39 @@ static void nrf_flush_tx(void) {
     nrf_csn_high();
 }
 
-static void nrf_init(void) {
+static bool nrf_self_test(void) {
+    // Read STATUS with NOP command. If SPI/wiring is bad, this is often 0x00 or 0xFF.
+    uint8_t nop = NRF_CMD_NOP;
+    uint8_t status = 0;
+    nrf_csn_low();
+    spi_write_read_blocking(NRF_SPI, &nop, &status, 1);
+    nrf_csn_high();
+
+    if (status == 0x00 || status == 0xFF) {
+        printf("NRF self-test FAIL: STATUS=0x%02X (check power/wiring/SPI)\n", status);
+        return false;
+    }
+
+    // Verify write/read path on CONFIG register.
+    uint8_t original_cfg = nrf_read_reg(NRF_CONFIG);
+    uint8_t test_cfg = (uint8_t)(original_cfg ^ 0x08u);  // toggle CRCO bit
+    nrf_write_reg(NRF_CONFIG, test_cfg);
+    uint8_t readback_cfg = nrf_read_reg(NRF_CONFIG);
+
+    if (readback_cfg != test_cfg) {
+        printf("NRF self-test FAIL: CONFIG write/read mismatch (w=0x%02X r=0x%02X)\n",
+               test_cfg, readback_cfg);
+        return false;
+    }
+
+    // Restore original value.
+    nrf_write_reg(NRF_CONFIG, original_cfg);
+
+    printf("NRF self-test OK: STATUS=0x%02X CONFIG=0x%02X\n", status, original_cfg);
+    return true;
+}
+
+static bool nrf_init(void) {
     spi_init(NRF_SPI, 4000000);
     gpio_set_function(NRF_SCK_PIN,  GPIO_FUNC_SPI);
     gpio_set_function(NRF_MOSI_PIN, GPIO_FUNC_SPI);
@@ -234,6 +275,11 @@ static void nrf_init(void) {
 
     nrf_flush_tx();
     nrf_write_reg(NRF_STATUS, 0x70);  // clear flags
+
+    if (!nrf_self_test()) {
+        return false;
+    }
+    return true;
 }
 
 // Send payload, block until sent or max retries hit (< 5 ms total)
@@ -345,7 +391,14 @@ int main(void) {
     printf("BMI160 OK\n");
 
     // NRF24L01 on SPI1
-    nrf_init();
+    if (!nrf_init()) {
+        printf("NRF24L01 init FAILED\n");
+        // Medium-speed blink = radio init error
+        while (true) {
+            gpio_put(LED_PIN, 1); sleep_ms(250);
+            gpio_put(LED_PIN, 0); sleep_ms(250);
+        }
+    }
     printf("NRF24L01 ready\n");
 
     // Calibration factor k (motor_freq = k * tremor_freq)
