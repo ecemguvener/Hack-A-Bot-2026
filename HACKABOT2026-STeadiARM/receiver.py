@@ -38,6 +38,7 @@ import utime
 import time
 import struct
 import sys
+import json
 
 
 # ===========================================================================
@@ -260,6 +261,68 @@ def parse_pc_command(line: str, cfg: dict):
     Returns False for unknown or malformed commands.
     """
     line = line.strip()
+    if not line:
+        return False
+
+    # JSON config from dashboard bridge:
+    # {"type":"config","mode":"NORMAL","k_factor":1.2,"intensity_limit":70}
+    if line.startswith("{"):
+        try:
+            payload = json.loads(line)
+        except ValueError:
+            print(f"[CMD ERR] Bad JSON: {line}")
+            return False
+
+        if payload.get("type") != "config":
+            return False
+
+        changed = False
+
+        if "mode" in payload:
+            raw_mode = payload["mode"]
+            if isinstance(raw_mode, str):
+                m = raw_mode.strip().lower()
+                mode_map = {
+                    "normal": 0,
+                    "calibration": 1,
+                    "continuous_on": 2,
+                    "off": 3,
+                    "safe": 3,
+                }
+                if m not in mode_map:
+                    print(f"[CMD ERR] Unknown mode string: {raw_mode}")
+                    return False
+                cfg["mode"] = mode_map[m]
+            else:
+                v = int(raw_mode)
+                if v not in (0, 1, 2, 3):
+                    print(f"[CMD ERR] mode must be 0..3, got {v}")
+                    return False
+                cfg["mode"] = v
+            changed = True
+
+        if "k_factor" in payload:
+            k = float(payload["k_factor"])
+            if not (0.1 <= k <= 25.0):
+                print(f"[CMD ERR] k_factor must be 0.1-25.0, got {k}")
+                return False
+            cfg["k_factor"] = k
+            changed = True
+
+        if "intensity_limit" in payload:
+            lim = float(payload["intensity_limit"])
+            # UI may send percentage (0..100), convert to 0..1.
+            if lim > 1.0:
+                lim = lim / 100.0
+            if not (0.0 <= lim <= 1.0):
+                print(f"[CMD ERR] intensity_limit must be 0.0-1.0, got {lim}")
+                return False
+            cfg["intensity_limit"] = lim
+            changed = True
+
+        if changed:
+            print(f"[CMD JSON] mode={cfg['mode']}  k={cfg['k_factor']:.2f}  limit={cfg['intensity_limit']:.2f}")
+        return changed
 
     if line == "status":
         print(f"[STATUS] mode={cfg['mode']}({_MODE_LABEL.get(cfg['mode'], cfg['mode'])})  "
@@ -391,6 +454,25 @@ try:
                     f"k={d['k_factor']:.1f} | "
                     f"mode={d['mode']}"
                 )
+
+                # JSON line for dashboard bridge (serial_ws_bridge.py).
+                # Keep this as one-line JSON (no extra text on same line).
+                mode_map = {
+                    "normal": "NORMAL",
+                    "calibration": "CALIBRATION",
+                    "continuous_on": "CONTINUOUS_ON",
+                    "off": "SAFE",
+                }
+                payload = {
+                    "type": "telemetry",
+                    "f_tremor_hz": d["f_tremor"],
+                    "tremor_magnitude": d["magnitude"],
+                    "f_motor_hz": d["f_motor"],
+                    "k_factor": d["k_factor"],
+                    "mode": mode_map.get(d["mode"], "NORMAL"),
+                    "fault_flags": 0,
+                }
+                print(json.dumps(payload))
 
                 led.toggle()   # blink LED on each received packet
 
