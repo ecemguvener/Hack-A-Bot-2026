@@ -72,18 +72,8 @@ while True:
     else:
         # Check for Messages
         if nrf.any():
-            package = nrf.recv()          
-            message = struct.unpack("s",package)
-            msg = message[0].decode()
+            package = nrf.recv()
+            msg = package.decode().strip('\x00').strip()
             flash_led(1)
-
-            # Check for the new line character
-            if (msg == "\n") and (len(msg_string) <= 20):
-                print("full message",msg_string, msg)
-                msg_string = ""
-            else:
-                if len(msg_string) <= 20:
-                    msg_string = msg_string + msg
-                else:
-                    msg_string = ""
+            print("received:", msg)  # → "5.20,0.0312,0,5.20"
 
