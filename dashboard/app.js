@@ -14,8 +14,6 @@ const els = {
   magnitude: document.getElementById("magnitude"),
   fmotor: document.getElementById("fmotor"),
   kfactor: document.getElementById("kfactor"),
-  axis: document.getElementById("axis"),
-  motor: document.getElementById("motor"),
   modeInput: document.getElementById("modeInput"),
   kInput: document.getElementById("kInput"),
   intensityInput: document.getElementById("intensityInput"),
@@ -25,7 +23,6 @@ const els = {
 const charts = {
   ft: setupChart(document.getElementById("chartFTremor"), "#2563eb"),
   mag: setupChart(document.getElementById("chartMagnitude"), "#16a34a"),
-  fm: setupChart(document.getElementById("chartFMotor"), "#ea580c"),
 };
 
 let ws = null;
@@ -53,15 +50,12 @@ function onTelemetry(data) {
   els.magnitude.textContent = num(data.tremor_magnitude, 3);
   els.fmotor.textContent = num(data.f_motor_hz, 2);
   els.kfactor.textContent = num(data.k_factor, 2);
-  els.axis.textContent = `${data.dominant_axis || "?"}${data.axis_sign === -1 ? "-" : data.axis_sign === 1 ? "+" : ""}`;
-  els.motor.textContent = String(data.selected_motor_id ?? "--");
 
   setPill(els.modeStatus, `MODE: ${mode}`, mode === "CALIBRATION" ? "pill-warn" : "pill");
   setPill(els.faultStatus, `FAULT: ${fault === 0 ? "NONE" : fault}`, fault === 0 ? "pill" : "pill-danger");
 
   pushPoint(charts.ft, Number(data.f_tremor_hz || 0));
   pushPoint(charts.mag, Number(data.tremor_magnitude || 0));
-  pushPoint(charts.fm, Number(data.f_motor_hz || 0));
 }
 
 function pushPoint(chart, y) {
