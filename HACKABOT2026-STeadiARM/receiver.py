@@ -377,7 +377,8 @@ try:
         # ---- Check for config commands from PC over USB serial ----
         try:
             import select
-            if select.select([sys.stdin], [], [], 0)[0]:
+            result = select.select([sys.stdin], [], [], 0)
+            if result and result[0]:
                 line = sys.stdin.readline()
                 changed = parse_pc_command(line, current_cfg)
                 if changed:
