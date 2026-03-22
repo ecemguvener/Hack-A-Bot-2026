@@ -439,7 +439,7 @@ class MotorController:
 #   motor_id   uint8   0-3
 #   f_motor    uint16  Hz x 100
 #   k_factor   uint8   k x 10
-#   mode       uint8   0=normal, 1=calibration
+#   mode       uint8   0=normal, 1=calibration, 2=continuous_on, 3=off
 # ===========================================================================
 
 _TX_BIT_US   = 2000   # microseconds per bit -> 500 bit/s
@@ -500,7 +500,7 @@ def build_telemetry_packet(f_tremor, magnitude, axis, axis_sign,
 # validate the packet frame and push complete payloads to _cfg_packets.
 #
 # Config payload (3 bytes, big-endian):
-#   mode            uint8   0=normal, 1=calibration
+#   mode            uint8   0=normal, 1=calibration, 2=continuous_on, 3=off
 #   k_factor        uint8   k x 10   (e.g. 30 means k=3.0)
 #   intensity_limit uint8   limit x 100  (e.g. 80 means 0.80)
 # ===========================================================================
@@ -617,6 +617,8 @@ class SystemConfig:
     """
     MODE_NORMAL      = 0
     MODE_CALIBRATION = 1
+    MODE_CONTINUOUS  = 2
+    MODE_OFF         = 3
 
     def __init__(self):
         self.mode            = self.MODE_NORMAL
@@ -633,7 +635,7 @@ class SystemConfig:
         # Safety clamps
         self.k_factor        = max(0.1,  min(25.0, self.k_factor))
         self.intensity_limit = max(0.0,  min(1.0,  self.intensity_limit))
-        self.mode            = max(0,    min(1,    self.mode))
+        self.mode            = max(0,    min(3,    self.mode))
 
 
 # ===========================================================================
@@ -757,6 +759,7 @@ active_motor  = MOTOR_DORSAL   # current active motor
 f_motor_hz    = 0.0            # current motor vibration frequency
 intensity     = 0.0            # current motor intensity
 last_result   = None           # most recent TremorResult (cached)
+latched_valid = False          # profile-2: holds counter-frequency until OFF
 t_next        = time.ticks_ms()
 
 try:
@@ -781,19 +784,45 @@ try:
 
             if last_result and last_result.freq_hz > 0:
                 # Valid tremor detected - compute motor target
-                active_motor = select_motor(last_result)
-                f_motor_hz   = config.k_factor * last_result.freq_hz
-                intensity    = calc_intensity(last_result, config.intensity_limit)
+                detected_motor     = select_motor(last_result)
+                detected_f_motor   = config.k_factor * last_result.freq_hz
+                detected_intensity = calc_intensity(last_result, config.intensity_limit)
+
+                if config.mode in (SystemConfig.MODE_NORMAL, SystemConfig.MODE_CALIBRATION):
+                    active_motor = detected_motor
+                    f_motor_hz   = detected_f_motor
+                    intensity    = detected_intensity
+                    latched_valid = False
+                elif config.mode == SystemConfig.MODE_CONTINUOUS:
+                    # Latch and keep vibrating until user sends OFF (mode=3).
+                    active_motor  = detected_motor
+                    f_motor_hz    = detected_f_motor
+                    intensity     = detected_intensity
+                    latched_valid = True
             else:
-                # No valid tremor - stop all motors safely
-                motors.stop_all()
-                f_motor_hz = 0.0
-                intensity  = 0.0
+                if config.mode in (SystemConfig.MODE_NORMAL, SystemConfig.MODE_CALIBRATION):
+                    # In normal/calibration mode: no tremor -> stop motors.
+                    motors.stop_all()
+                    f_motor_hz = 0.0
+                    intensity  = 0.0
+                    latched_valid = False
+                elif config.mode == SystemConfig.MODE_OFF:
+                    # Forced OFF mode always clears any previous latch.
+                    motors.stop_all()
+                    f_motor_hz = 0.0
+                    intensity  = 0.0
+                    latched_valid = False
+                # In continuous mode with no fresh tremor, keep last latched output.
 
         # ---- STAGE D: Update motor vibration ----
         # Only the selected (opposing) motor runs; all others coast.
+        if config.mode == SystemConfig.MODE_OFF:
+            motors.stop_all()
+            f_motor_hz = 0.0
+            intensity = 0.0
+            latched_valid = False
         for mid in range(4):
-            if mid == active_motor and f_motor_hz > 0:
+            if mid == active_motor and f_motor_hz > 0 and (config.mode != SystemConfig.MODE_CONTINUOUS or latched_valid):
                 motors.update_vibration(mid, f_motor_hz, intensity, SAMPLE_RATE_HZ)
             else:
                 motors.coast(mid)
@@ -805,6 +834,11 @@ try:
             print(f"[CFG] mode={cfg['mode']}  "
                   f"k={cfg['k_factor']:.1f}  "
                   f"limit={cfg['intensity_limit']:.2f}")
+            if config.mode == SystemConfig.MODE_OFF:
+                motors.stop_all()
+                f_motor_hz = 0.0
+                intensity = 0.0
+                latched_valid = False
 
         # ---- STAGE F: Transmit telemetry to base Pico at 10 Hz ----
         if sample_count % TELEM_EVERY == 0 and last_result is not None:
@@ -823,7 +857,12 @@ try:
         # ---- STAGE G: Status print at ~1 Hz (every 100 samples) ----
         if sample_count % 100 == 0:
             if last_result:
-                mode_str = "CAL" if config.mode else "NORM"
+                mode_str = {
+                    SystemConfig.MODE_NORMAL: "NORM",
+                    SystemConfig.MODE_CALIBRATION: "CAL",
+                    SystemConfig.MODE_CONTINUOUS: "CONT",
+                    SystemConfig.MODE_OFF: "OFF",
+                }.get(config.mode, str(config.mode))
                 print(f"[{sample_count:6d}] {last_result}"
                       f"  -> motor={MOTOR_NAMES[active_motor]}"
                       f"  f_m={f_motor_hz:.2f}Hz"
