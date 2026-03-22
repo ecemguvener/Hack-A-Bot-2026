@@ -8,42 +8,41 @@ Note: keep final pin map consistent in firmware and this doc.
 ### BMI160 (I2C)
 - VCC -> 3V3
 - GND -> GND
-- SDA -> GP4
-- SCL -> GP5
+- SDA -> GP0
+- SCL -> GP1
 
-### nRF24L01+ (SPI)
+### 433 MHz TX (FS1000A) - telemetry to base
 - VCC -> 3V3
 - GND -> GND
-- CE  -> GP20
-- CSN -> GP17
-- SCK -> GP18
-- MOSI-> GP19
-- MISO-> GP16
+- DATA -> GP10
 
-### N20 Motor Drive (required driver transistor/MOSFET stage)
-- PWM/CTRL pin from Pico -> GP15 (example)
-- Driver input <- GP15
-- Driver output -> N20 motor terminals
-- Motor supply -> regulated external rail
-- Flyback protection required (if not integrated in driver)
-- Common GND between Pico, driver, and motor supply
+### 433 MHz RX (XY-MK-5V) - config from base
+- DATA output is 5V, must be level-shifted before Pico GPIO
+- Level-shifted DATA -> GP11
+- VCC -> external 5V (module dependent), GND common with Pico
+
+### N20 Motor Drive (MX1508, 4 channels)
+- Motor A (DORSAL): IN1 GP2, IN2 GP3
+- Motor B (VOLAR):  IN1 GP4, IN2 GP5
+- Motor C (RADIAL): IN1 GP6, IN2 GP7
+- Motor D (ULNAR):  IN1 GP8, IN2 GP9
+- MX1508 motor supply -> external rail
+- Pico GND, driver GND, sensor GND, RF GND must be common
 
 ## Node B (Base Pico)
 
-### nRF24L01+ (SPI)
+### 433 MHz RX (XY-MK-5V) - telemetry from glove
+- DATA output is 5V, must be level-shifted before Pico GPIO
+- Level-shifted DATA -> GP0
+- GND -> GND (common)
+
+### 433 MHz TX (FS1000A) - config to glove
+- DATA -> GP2
 - VCC -> 3V3
 - GND -> GND
-- CE  -> GP20
-- CSN -> GP17
-- SCK -> GP18
-- MOSI-> GP19
-- MISO-> GP16
 
-### Optional Controls (if used on base)
-- Joystick VRx -> GP26
-- Joystick VRy -> GP27
-- Joystick SW  -> GP22
-- OLED SDA/SCL -> GP4/GP5
+### USB
+- Pico USB -> laptop for serial commands + bridge
 
 ## Power Notes
 > Most late failures are power-related. Test motors and radios together early.
@@ -51,3 +50,4 @@ Note: keep final pin map consistent in firmware and this doc.
 - Isolate noisy motor supply from logic rail as much as possible.
 - Use buck converter for stable rails.
 - All grounds must be common.
+- Level-shift any 5V RF receiver output before Pico GPIO input.
