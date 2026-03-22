@@ -1,6 +1,5 @@
 # VibraArm: User-Specific Tremor Stabilisation Glove
 
-## Project 6 - Creative (Assistive Tech)
 
 VibraArm is a two-node embedded assistive system designed for people with Parkinsonian tremor and hand instability. 
 It measures hand tremor in real time using an IMU, computes tremor frequency/magnitude/direction, and drives an opposing vibration motor profile to improve hand stability.
@@ -9,10 +8,11 @@ The system uses **two Raspberry Pi Pico 2 boards with wireless coordination**:
 - **Glove Pico (Pi #1):** sensing + closed-loop motor control on the hand
 - **Base Pico (Pi #2):** receives telemetry, sends configuration/training parameters, bridges data to laptop UI
 
+For Setup and Run please jump to step 8. 
+
 ---
 
-## 1. Problem Definition and Solution Fit (Rubric Alignment)
-
+## 1. Problem Definition and Solution Fit
 ### Real-world problem
 People with Parkinson’s and related conditions often experience involuntary hand tremor that disrupts daily tasks (holding objects, writing, buttoning, using tools). Existing options are often limited, non-personalized, expensive, or intrusive.
 
@@ -23,14 +23,6 @@ People with Parkinson’s and related conditions often experience involuntary ha
 ### Why this solution fits the prompt
 - Prompt area: **Assistive Tech**
 - The prototype directly improves safety/usability in daily hand movement tasks by applying responsive vibration feedback based on measured tremor behavior.
-
-### Key constraints considered
-- 24-hour hackathon build time
-- Real-time response requirements (~100 Hz control)
-- Need for simple, robust live demo
-- Wireless two-node requirement
-- Safe motor intensity limits for wearable use
-
 ---
 
 ## 2. System Overview
@@ -159,32 +151,6 @@ Base Pico emits JSON lines such as:
 
 ---
 
-## 6. Live Demo Plan (Judging)
-
-### 2-3 minute demo script
-1. Show problem statement + target user in one sentence
-2. Show both Pico nodes and wireless link status
-3. Start hand tremor simulation / intentional oscillation
-4. Show live UI updates:
-   - tremor frequency
-   - tremor magnitude
-   - motor frequency
-   - safety panel
-5. Switch modes live:
-   - Calibration (tune k)
-   - Normal (closed-loop)
-   - Continuous ON
-   - OFF safe stop
-6. Conclude with impact + limitations + future work
-
-### Success criteria during demo
-- Stable packet flow
-- Real-time graph updates
-- Visible motor response to tremor changes
-- Clear safe stop behavior
-
----
-
 ## 7. Engineering Tradeoffs
 
 - **Signal processing simplicity vs complexity:**
@@ -238,33 +204,6 @@ python3 dashboard/serial_ws_bridge.py --serial-port /dev/tty.usbmodemXXXX --baud
 - Continuous mode only active when user requests it
 - Closed-loop remains local on glove node
 - Telemetry and control are separable from core loop
-
----
-
-## 10. Rubric Mapping Summary
-
-### Problem Definition and Solution Fit (30)
-- Clear user + problem
-- Assistive-tech alignment
-- Constraints and rationale documented
-
-### Live Demo and Effectiveness (25)
-- End-to-end loop visible live
-- Real telemetry + actuation + mode switching
-- Safe stop shown in demo
-
-### Technical Implementation and Engineering Quality (20)
-- Two synchronized Pico nodes
-- Wireless telemetry/config roundtrip
-- Real-time IMU-based control loop
-- UI bridge integration
-
-### Innovation and Creativity (15)
-- Personalized tremor-response profile tuning
-- Continuous/normal/off control profiles for practical operation
-
-### Communication and Supporting Documentation (10)
-- Architecture, modes, data flow, setup, demo script, tradeoffs, and safety all documented here
 
 ---
 
