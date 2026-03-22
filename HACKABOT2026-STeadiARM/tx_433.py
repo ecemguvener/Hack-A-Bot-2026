@@ -57,7 +57,7 @@ def send_packet(data: bytes):
 #   mode       : uint8    (1 B)  0=normal, 1=calibration
 # Total payload = 11 bytes
 
-PACKET_FMT = ">HH BBH BB"   # big-endian
+PACKET_FMT = ">HHBBHBB"   # big-endian
 
 def build_telemetry(f_tremor, magnitude, axis, axis_sign,
                     motor_id, f_motor, k_factor, mode):

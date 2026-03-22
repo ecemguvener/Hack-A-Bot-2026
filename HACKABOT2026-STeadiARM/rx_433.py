@@ -20,7 +20,7 @@ RX_PIN   = 9
 BIT_US   = 2000          # must match transmitter
 HALF_BIT = BIT_US // 2   # tolerance window
 
-PACKET_FMT = ">HH BBH BB"
+PACKET_FMT = ">HHBBHBB"
 PAYLOAD_LEN = struct.calcsize(PACKET_FMT)   # 11 bytes
 
 # ── shared state (written in IRQ, read in main) ───────────────────────────────
