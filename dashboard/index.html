@@ -16,11 +16,6 @@
         <p class="eyebrow">Health AI Robotics Console</p>
         <h1>VibraARM Telemetry Dashboard</h1>
       </div>
-      <div class="pill-group">
-        <span id="linkStatus" class="pill pill-warn">DISCONNECTED</span>
-        <span id="modeStatus" class="pill">MODE: NORMAL</span>
-        <span id="faultStatus" class="pill">FAULT: NONE</span>
-      </div>
     </header>
 
     <section class="connect-row panel">
@@ -31,6 +26,32 @@
       <button id="connectBtn">Connect</button>
       <button id="disconnectBtn">Disconnect</button>
       <button id="simulateBtn">Simulate</button>
+    </section>
+
+    <section class="hero-grid">
+      <article class="panel state-hero">
+        <h3>Patient State</h3>
+        <div class="ring-wrap">
+          <svg viewBox="0 0 220 220" class="state-ring-svg" aria-hidden="true">
+            <circle cx="110" cy="110" r="88" class="ring-track"></circle>
+            <circle cx="110" cy="110" r="88" class="ring-progress" id="stateRingProgress"></circle>
+          </svg>
+          <div class="ring-center">
+            <p id="stateLabel">STABLE</p>
+            <span id="stateScore">0%</span>
+          </div>
+        </div>
+      </article>
+
+      <article class="panel safety-panel">
+        <h3>Live Safety Panel</h3>
+        <div class="safety-grid">
+          <div class="safety-chip" id="chipIntensity">INTENSITY LIMIT</div>
+          <div class="safety-chip" id="chipSafeMode">SAFE MODE</div>
+          <div class="safety-chip" id="chipPacketLoss">PACKET LOSS</div>
+          <div class="safety-chip" id="chipImuHealth">IMU HEALTH</div>
+        </div>
+      </article>
     </section>
 
     <section class="kpis">
@@ -49,6 +70,37 @@
         <h3>Tremor Magnitude</h3>
         <canvas id="chartMagnitude" width="500" height="180"></canvas>
       </article>
+    </section>
+
+    <section class="panel before-after">
+      <h3>Before vs After Control</h3>
+      <canvas id="chartBeforeAfter" width="1100" height="220"></canvas>
+      <p class="hint">Blue = raw tremor magnitude, Green = estimated after-control smoothing.</p>
+    </section>
+
+    <section class="panel wizard">
+      <h3>Calibration Wizard (3 Steps)</h3>
+      <div class="wizard-steps">
+        <div class="wizard-step" id="wizStep1">1. Baseline Capture (5s)</div>
+        <div class="wizard-step" id="wizStep2">2. k Sweep Test</div>
+        <div class="wizard-step" id="wizStep3">3. Auto Suggest + Confidence</div>
+      </div>
+      <div class="wizard-controls">
+        <button id="wizardStartBtn">Run Wizard</button>
+        <button id="wizardApplyBtn">Apply Suggested k</button>
+        <p id="wizardResult">Suggested k: -- | Confidence: --</p>
+      </div>
+    </section>
+
+    <section class="panel replay-panel">
+      <h3>Session Replay</h3>
+      <div class="replay-controls">
+        <button id="recordStartBtn">Start Record</button>
+        <button id="recordStopBtn">Stop Record</button>
+        <button id="replayBtn">Replay Session</button>
+        <button id="clearReplayBtn">Clear Session</button>
+      </div>
+      <p id="replayStatus">No session recorded.</p>
     </section>
 
     <section class="controls panel">
