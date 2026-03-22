@@ -14,7 +14,7 @@ import utime
 import struct
 
 # ── config ────────────────────────────────────────────────────────────────────
-TX_PIN    = 2
+TX_PIN    = 8
 BIT_US    = 2000   # 2 ms per bit → 500 bit/s (slow = reliable over 433 MHz)
 PREAMBLE  = 12     # number of 0xAA sync bytes
 

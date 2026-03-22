@@ -16,7 +16,7 @@ import utime
 import struct
 
 # ── config ────────────────────────────────────────────────────────────────────
-RX_PIN   = 3
+RX_PIN   = 9
 BIT_US   = 2000          # must match transmitter
 HALF_BIT = BIT_US // 2   # tolerance window
 
