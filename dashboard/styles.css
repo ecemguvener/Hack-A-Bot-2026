@@ -73,7 +73,7 @@ body::before {
 
 .eyebrow {
   margin: 0 0 6px;
-  color: var(--accent-2);
+  color: #000000 !important;
   font-size: 12px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -402,7 +402,26 @@ button.danger {
   font-size: 13px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #a8f4ff;
+  color: #000000 !important;
+}
+
+/* Force specific requested headings to black */
+.safety-panel h3,
+#chartFTremor,
+#chartMagnitude,
+.before-after h3,
+.controls h3,
+.log-wrap h3 {
+  color: #000000 !important;
+}
+
+.charts article:first-child h3,
+.charts article:nth-child(2) h3 {
+  color: #000000 !important;
+}
+
+.black-title {
+  color: #000000 !important;
 }
 
 canvas {

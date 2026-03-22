@@ -13,7 +13,7 @@
   <div class="app-shell">
     <header class="topbar panel">
       <div class="title-wrap">
-        <p class="eyebrow">Health AI Robotics Console</p>
+        <p class="eyebrow black-title">Health AI Robotics Console</p>
         <h1>VibraARM Telemetry Dashboard</h1>
       </div>
     </header>
@@ -30,7 +30,7 @@
 
     <section class="hero-grid">
       <article class="panel state-hero">
-        <h3>Patient State</h3>
+        <h3 class="black-title">Patient State</h3>
         <div class="ring-wrap">
           <svg viewBox="0 0 220 220" class="state-ring-svg" aria-hidden="true">
             <circle cx="110" cy="110" r="88" class="ring-track"></circle>
@@ -44,7 +44,7 @@
       </article>
 
       <article class="panel safety-panel">
-        <h3>Live Safety Panel</h3>
+        <h3 class="black-title">Live Safety Panel</h3>
         <div class="safety-head">
           <p>System Safety Score</p>
           <span id="safetyScore">--</span>
@@ -74,23 +74,23 @@
 
     <section class="charts">
       <article class="panel">
-        <h3>Tremor Frequency</h3>
+        <h3 class="black-title">Tremor Frequency</h3>
         <canvas id="chartFTremor" width="500" height="180"></canvas>
       </article>
       <article class="panel">
-        <h3>Tremor Magnitude</h3>
+        <h3 class="black-title">Tremor Magnitude</h3>
         <canvas id="chartMagnitude" width="500" height="180"></canvas>
       </article>
     </section>
 
     <section class="panel before-after">
-      <h3>Before vs After Control</h3>
+      <h3 class="black-title">Before vs After Control</h3>
       <canvas id="chartBeforeAfter" width="1100" height="220"></canvas>
       <p class="hint">Blue = raw tremor magnitude, Green = estimated after-control smoothing.</p>
     </section>
 
     <section class="controls panel">
-      <h3>Calibration Controls</h3>
+      <h3 class="black-title">Calibration Controls</h3>
       <div class="control-grid">
         <label>
           Mode
@@ -114,11 +114,10 @@
         <button id="sendConfigBtn">Send Config</button>
         <button id="safeStopBtn" class="danger">Safe Stop</button>
       </div>
-      <p class="hint">Outgoing config JSON: <code>{"type":"config","mode":"...","k_factor":1.2,"intensity_limit":70}</code></p>
     </section>
 
     <section class="log-wrap panel">
-      <h3>Event Log</h3>
+      <h3 class="black-title">Event Log</h3>
       <pre id="eventLog"></pre>
     </section>
 
