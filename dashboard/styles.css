@@ -1,16 +1,16 @@
 :root {
-  --bg: #040b15;
-  --bg-2: #071427;
-  --panel: rgba(7, 20, 39, 0.78);
-  --panel-strong: rgba(6, 18, 36, 0.93);
-  --text: #d9f6ff;
-  --muted: #7ca3b3;
-  --line: rgba(83, 187, 255, 0.35);
-  --accent: #11c8ff;
-  --accent-2: #32ffcd;
-  --danger: #ff4d7a;
-  --warn: #ffb020;
-  --ok: #2cff83;
+  --bg: #dfdcd2;
+  --bg-2: #f3f1ec;
+  --panel: rgba(255, 255, 255, 0.78);
+  --panel-strong: rgba(255, 255, 255, 0.93);
+  --text: #2e2330;
+  --muted: #6f5f72;
+  --line: rgba(205, 170, 221, 0.55);
+  --accent: #cc2cad;
+  --accent-2: #cdaadd;
+  --danger: #b6225e;
+  --warn: #a56f00;
+  --ok: #2d8f5a;
 }
 
 * { box-sizing: border-box; }
@@ -32,8 +32,8 @@ body::before {
   inset: 0;
   pointer-events: none;
   background-image:
-    linear-gradient(rgba(124, 163, 179, 0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(124, 163, 179, 0.06) 1px, transparent 1px);
+    linear-gradient(rgba(111, 95, 114, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(111, 95, 114, 0.08) 1px, transparent 1px);
   background-size: 30px 30px;
   mask-image: radial-gradient(circle at center, black 45%, transparent 100%);
 }
@@ -49,7 +49,7 @@ body::before {
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 16px;
-  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.35), inset 0 0 0 1px rgba(17, 200, 255, 0.08);
+  box-shadow: 0 10px 24px rgba(64, 43, 67, 0.14), inset 0 0 0 1px rgba(204, 44, 173, 0.12);
   backdrop-filter: blur(7px);
 }
 
@@ -130,9 +130,9 @@ input, select {
 }
 
 button {
-  border: 1px solid rgba(17, 200, 255, 0.55);
-  background: linear-gradient(145deg, rgba(17, 200, 255, 0.95), rgba(19, 109, 255, 0.88));
-  color: #ecfdff;
+  border: 1px solid rgba(204, 44, 173, 0.45);
+  background: linear-gradient(145deg, rgba(204, 44, 173, 0.96), rgba(205, 170, 221, 0.94));
+  color: #fff7fe;
   font-weight: 700;
   letter-spacing: 0.03em;
   cursor: pointer;
@@ -410,7 +410,7 @@ canvas {
   height: auto;
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: linear-gradient(180deg, rgba(4, 13, 24, 0.95), rgba(8, 20, 34, 0.95));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(239, 235, 227, 0.95));
 }
 
 .control-grid {
@@ -427,8 +427,8 @@ canvas {
 }
 
 .hint code {
-  color: #9de8ff;
-  background: rgba(5, 16, 30, 0.85);
+  color: #5c3e66;
+  background: rgba(255, 255, 255, 0.92);
   padding: 2px 5px;
   border-radius: 6px;
 }
@@ -437,11 +437,11 @@ canvas {
   margin: 0;
   max-height: 240px;
   overflow: auto;
-  border: 1px solid rgba(17, 200, 255, 0.3);
+  border: 1px solid rgba(205, 170, 221, 0.55);
   border-radius: 10px;
   padding: 10px;
-  background: #020916;
-  color: #cce8ff;
+  background: rgba(255, 255, 255, 0.92);
+  color: #3a2b3f;
   font-size: 12px;
 }
 

@@ -30,10 +30,10 @@ const els = {
 };
 
 const charts = {
-  ft: setupChart(document.getElementById("chartFTremor"), "#ec4899"),
-  mag: setupChart(document.getElementById("chartMagnitude"), "#a855f7"),
-  baRaw: setupChart(document.getElementById("chartBeforeAfter"), "#ec4899"),
-  baAfter: setupChart(document.getElementById("chartBeforeAfter"), "#a855f7"),
+  ft: setupChart(document.getElementById("chartFTremor"), "#cc2cad"),
+  mag: setupChart(document.getElementById("chartMagnitude"), "#cdaadd"),
+  baRaw: setupChart(document.getElementById("chartBeforeAfter"), "#cc2cad"),
+  baAfter: setupChart(document.getElementById("chartBeforeAfter"), "#cdaadd"),
 };
 
 let ws = null;
