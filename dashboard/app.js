@@ -41,10 +41,10 @@ const els = {
 };
 
 const charts = {
-  ft: setupChart(document.getElementById("chartFTremor"), "#2563eb"),
-  mag: setupChart(document.getElementById("chartMagnitude"), "#16a34a"),
-  baRaw: setupChart(document.getElementById("chartBeforeAfter"), "#2563eb"),
-  baAfter: setupChart(document.getElementById("chartBeforeAfter"), "#16a34a"),
+  ft: setupChart(document.getElementById("chartFTremor"), "#ec4899"),
+  mag: setupChart(document.getElementById("chartMagnitude"), "#a855f7"),
+  baRaw: setupChart(document.getElementById("chartBeforeAfter"), "#ec4899"),
+  baAfter: setupChart(document.getElementById("chartBeforeAfter"), "#a855f7"),
 };
 
 let ws = null;
