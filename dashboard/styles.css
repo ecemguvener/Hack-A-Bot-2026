@@ -166,8 +166,7 @@ button.danger {
 
 .state-hero,
 .safety-panel,
-.before-after,
-.wizard {
+.before-after {
   padding: 12px;
   margin-bottom: 12px;
 }
@@ -396,7 +395,6 @@ button.danger {
 .controls h3,
 .log-wrap h3,
 .before-after h3,
-.wizard h3,
 .state-hero h3,
 .safety-panel h3 {
   margin: 0 0 8px;
@@ -420,46 +418,6 @@ canvas {
   grid-template-columns: repeat(5, minmax(140px, 1fr));
   gap: 8px;
   align-items: end;
-}
-
-.wizard-steps {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(120px, 1fr));
-  gap: 8px;
-}
-
-.wizard-step {
-  padding: 10px;
-  border-radius: 10px;
-  border: 1px solid var(--line);
-  background: rgba(6, 18, 36, 0.8);
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.wizard-step.active {
-  background: rgba(17, 200, 255, 0.25);
-  color: #d6f6ff;
-}
-
-.wizard-step.done {
-  background: rgba(44, 255, 131, 0.2);
-  color: #b6ffd9;
-}
-
-.wizard-controls {
-  margin-top: 10px;
-  display: grid;
-  grid-template-columns: auto auto 1fr;
-  gap: 8px;
-  align-items: center;
-}
-
-#wizardResult {
-  margin: 0;
-  color: #b7e4ff;
-  font-size: 13px;
 }
 
 .hint {
@@ -499,8 +457,6 @@ canvas {
   .hero-grid { grid-template-columns: 1fr; }
   .kpis { grid-template-columns: repeat(3, minmax(140px, 1fr)); }
   .charts { grid-template-columns: 1fr; }
-  .wizard-steps { grid-template-columns: 1fr; }
-  .wizard-controls { grid-template-columns: 1fr; }
   .control-grid { grid-template-columns: 1fr 1fr; }
   .connect-row { grid-template-columns: 1fr 1fr; }
 }

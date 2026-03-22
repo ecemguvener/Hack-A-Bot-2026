@@ -23,12 +23,6 @@ const els = {
   magnitude: document.getElementById("magnitude"),
   fmotor: document.getElementById("fmotor"),
   kfactor: document.getElementById("kfactor"),
-  wizardStartBtn: document.getElementById("wizardStartBtn"),
-  wizardApplyBtn: document.getElementById("wizardApplyBtn"),
-  wizardResult: document.getElementById("wizardResult"),
-  wizStep1: document.getElementById("wizStep1"),
-  wizStep2: document.getElementById("wizStep2"),
-  wizStep3: document.getElementById("wizStep3"),
   modeInput: document.getElementById("modeInput"),
   kInput: document.getElementById("kInput"),
   intensityInput: document.getElementById("intensityInput"),
@@ -49,7 +43,6 @@ let packetLossPct = 0;
 let totalPackets = 0;
 let missedPackets = 0;
 let lastPacketMs = 0;
-let wizardSuggestedK = null;
 
 const ringCircumference = 2 * Math.PI * 88;
 els.stateRingProgress.style.strokeDasharray = `${ringCircumference}`;
@@ -341,79 +334,10 @@ function clamp01(v) {
   return Math.min(1, Math.max(0, v));
 }
 
-function markWizardStep(stepEl, state) {
-  stepEl.className = `wizard-step ${state}`;
-}
-
-async function runWizard() {
-  wizardSuggestedK = null;
-  markWizardStep(els.wizStep1, "active");
-  markWizardStep(els.wizStep2, "");
-  markWizardStep(els.wizStep3, "");
-  els.wizardResult.textContent = "Running baseline capture...";
-
-  const baseline = await captureMagnitude(5000);
-  markWizardStep(els.wizStep1, "done");
-  markWizardStep(els.wizStep2, "active");
-  els.wizardResult.textContent = `Baseline: ${num(baseline, 3)}. Running k sweep...`;
-
-  const kCandidates = [0.8, 1.0, 1.2, 1.4, 1.6];
-  const results = [];
-  for (const k of kCandidates) {
-    els.kInput.value = String(k);
-    sendConfig({ k_factor: k, mode: "CALIBRATION" });
-    await sleep(1600);
-    const val = await captureMagnitude(1200);
-    const score = baseline - val;
-    results.push({ k, val, score });
-  }
-  markWizardStep(els.wizStep2, "done");
-  markWizardStep(els.wizStep3, "active");
-
-  results.sort((a, b) => b.score - a.score);
-  const best = results[0];
-  const second = results[1] || best;
-  const confidence = clamp01((best.score - second.score + 0.02) / 0.12);
-  wizardSuggestedK = best.k;
-  els.wizardResult.textContent = `Suggested k: ${best.k.toFixed(2)} | Confidence: ${(confidence * 100).toFixed(0)}%`;
-  markWizardStep(els.wizStep3, "done");
-  sendConfig({ mode: "NORMAL" });
-  log(`Wizard suggested k=${best.k.toFixed(2)} (confidence ${(confidence * 100).toFixed(0)}%)`);
-}
-
-function captureMagnitude(durationMs) {
-  const points = [];
-  const start = Date.now();
-  return new Promise((resolve) => {
-    const timer = setInterval(() => {
-      const v = Number(els.magnitude.textContent);
-      if (!Number.isNaN(v)) points.push(v);
-      if (Date.now() - start >= durationMs) {
-        clearInterval(timer);
-        resolve(points.length ? points.reduce((a, b) => a + b, 0) / points.length : 0);
-      }
-    }, 100);
-  });
-}
-
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 els.connectBtn.addEventListener("click", connect);
 els.disconnectBtn.addEventListener("click", disconnect);
 els.simulateBtn.addEventListener("click", startSim);
 els.sendConfigBtn.addEventListener("click", () => sendConfig());
-els.wizardStartBtn.addEventListener("click", runWizard);
-els.wizardApplyBtn.addEventListener("click", () => {
-  if (!wizardSuggestedK) {
-    log("No suggested k yet. Run wizard first.");
-    return;
-  }
-  els.kInput.value = wizardSuggestedK.toFixed(2);
-  sendConfig({ k_factor: wizardSuggestedK, mode: "NORMAL" });
-  log(`Applied wizard k=${wizardSuggestedK.toFixed(2)}`);
-});
 els.safeStopBtn.addEventListener("click", () => {
   sendConfig({ mode: "SAFE", intensity_limit: 0 });
   els.modeInput.value = "SAFE";
